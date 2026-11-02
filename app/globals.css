@@ -1,26 +1,117 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Dark mode follows the theme toggle (data-theme on <html>), like the live app. */
+@custom-variant dark (&:is([data-theme="dark"] *));
 
 @theme inline {
+  --font-sans: var(--font-dm-sans);
+  --font-mono: var(--font-dm-mono);
+  --font-heading: var(--font-dm-sans);
+
+  /* HT Pilot tokens as Tailwind colours: bg-raised, text-dim, border-line-soft, bg-accent-dim … */
+  --color-bg: var(--bg);
+  --color-raised: var(--bg-raised);
+  --color-surface: var(--surface);
+  --color-surface-hi: var(--surface-hi);
+  --color-line-soft: var(--border-soft);
+  --color-fg: var(--text);
+  --color-dim: var(--text-dim);
+  --color-faint: var(--text-faint);
+  --color-accent-dim: var(--accent-dim);
+  --color-good: var(--good);
+  --color-good-dim: var(--good-dim);
+  --color-warn: var(--warn);
+  --color-warn-dim: var(--warn-dim);
+  --color-bad: var(--bad);
+  --color-bad-dim: var(--bad-dim);
+  --color-ink: var(--ink);
+
+  /* shadcn names, pointed at the same tokens so its components match. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* HT Pilot tokens (Index.html L13-62) */
+:root, [data-theme="light"] {
+  --bg:#F5F4F0; --bg-raised:#FFFFFF; --surface:#FFFFFF; --surface-hi:#F0EFE9;
+  --border:#E2E0D8; --border-soft:#ECEAE3;
+  --text:#1A1916; --text-dim:#6B6860; --text-faint:#A09E98;
+  --accent:#0D7A5F; --accent-dim:#E6F5F0;
+  --good:#0D7A5F; --good-dim:#E6F5F0; --warn:#B06000; --warn-dim:#FFF3E0; --bad:#B02020; --bad-dim:#FDF0F0;
+  --detail-bg:#F0EFE9; --ink:#0E0E0C;
+}
+[data-theme="dark"] {
+  --bg:#121210; --bg-raised:#1A1A17; --surface:#1F1F1B; --surface-hi:#292924;
+  --border:#36352F; --border-soft:#2B2A26;
+  --text:#EDEBE4; --text-dim:#A8A59C; --text-faint:#6E6B63;
+  --accent:#3FB58F; --accent-dim:#143A2F;
+  --good:#4FB784; --good-dim:#1B3428; --warn:#D6A24C; --warn-dim:#3A2E17; --bad:#E5686B; --bad-dim:#3A1F22;
+  --detail-bg:#151513;
+}
+:root {
+  --background: var(--bg); --foreground: var(--text);
+  --card: var(--bg-raised); --card-foreground: var(--text);
+  --popover: var(--bg-raised); --popover-foreground: var(--text);
+  --primary: var(--accent); --primary-foreground: #fff;
+  --secondary: var(--surface-hi); --secondary-foreground: var(--text);
+  --muted: var(--surface-hi); --muted-foreground: var(--text-dim);
+  --accent-foreground: #fff;
+  --destructive: var(--bad);
+  --input: var(--border); --ring: var(--accent);
+  --radius: 0.5rem;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { @apply font-sans; }
+  body { background:var(--bg); color:var(--text); font-size:14px; -webkit-font-smoothing:antialiased; transition:background .15s, color .15s; }
+}
+
+@keyframes ht-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes ht-toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* Plain rules placed after @layer base are dropped from the compiled CSS in this project, so these sit in a layer. */
+@layer components {
+/* Follow-up "started" chip: pulsing dot */
+.ht-pulse { animation: ht-pulse 1.4s ease-in-out infinite; }
+/* Toast: slides up and fades in over .2s */
+.ht-toast { animation: ht-toast-in .2s ease-out; }
+
+/* Tracker invoice page colours (#pfDetailView in Index.html L1838-1839) */
+.pfx { --pfx-accent:#0D7A5F; --pfx-accent-dim:#E6F5F0; --pfx-accent-line:#9BD4C4; --pfx-red:#B02020; --pfx-blue:#1A5FA8; --pfx-blue-dim:#EAF2FF; --pfx-yel:#B06000; --pfx-yel-dim:#FFF3E0; --pfx-yel-line:#F5C67A;
+  --pfx-sched-bg:#FEF6D8; --pfx-sched:#A16207; --pfx-indigo-bg:rgba(99,102,241,.12); --pfx-indigo-line:rgba(99,102,241,.55); --pfx-indigo:#3F42C8;
+  --pfx-orange-bg:rgba(240,149,44,.15); --pfx-orange-line:rgba(240,149,44,.6); --pfx-orange:#A85A06;
+  --pfx-tbd-bg:#FFEDD5; --pfx-tbd:#C2410C; --pfx-tbd-line:#EA580C; }
+[data-theme="dark"] .pfx { --pfx-accent:#3FB58F; --pfx-accent-dim:#143A2F; --pfx-accent-line:rgba(63,181,143,.45); --pfx-red:#F87171; --pfx-blue:#7AA7F5; --pfx-blue-dim:rgba(122,167,245,.14); --pfx-yel:#E8C25A; --pfx-yel-dim:rgba(232,194,90,.13); --pfx-yel-line:rgba(232,194,90,.45);
+  --pfx-sched-bg:rgba(232,194,90,.13); --pfx-sched:#E8C25A; --pfx-indigo-bg:rgba(99,102,241,.18); --pfx-indigo:#A5A8FF;
+  --pfx-orange-bg:rgba(240,149,44,.21); --pfx-orange:#F5B26B;
+  --pfx-tbd-bg:rgba(251,146,60,.14); --pfx-tbd:#FB923C; --pfx-tbd-line:#FB923C; }
+
+/* POC contact-type pills */
+.pm-type-email { background:#E8EEFF; color:#3B5BDB; } .pm-type-phone { background:#E3F6EA; color:#1E8E4E; }
+.pm-type-linkedin { background:#F3E8FF; color:#7E22CE; } .pm-type-telegram { background:#E0F2FE; color:#0369A1; } .pm-type-twitter { background:#E6F4F1; color:#0F766E; }
+[data-theme="dark"] .pm-type-email { background:rgba(91,141,239,.16); color:#8FB0F5; } [data-theme="dark"] .pm-type-phone { background:rgba(62,207,142,.14); color:#5ED6A0; }
+[data-theme="dark"] .pm-type-linkedin { background:rgba(167,139,250,.16); color:#C4B5FD; } [data-theme="dark"] .pm-type-telegram { background:rgba(56,189,248,.14); color:#7DD3FC; } [data-theme="dark"] .pm-type-twitter { background:rgba(45,212,191,.14); color:#5EEAD4; }
 }

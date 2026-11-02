@@ -1,0 +1,77 @@
+@layer components {
+/* Dashboard page (#dashboardPage): copied from Index.html L485 (.badge base), L822-896 (minus the unused bar/funnel/chip/segment rules), L897, L2109-2121, L2134-2139,
+   L2159-2160, L2183-2184, same order. Only the dashboard's own rules; values unchanged. */
+
+/* Font tokens + page height (the live page fills the window under the 52px top bar and scrolls on its own) */
+#dashboardPage{ --body: var(--font-dm-sans), 'DM Sans', sans-serif; --mono: var(--font-dm-mono), 'DM Mono', monospace; --disp: var(--font-dm-sans), 'DM Sans', sans-serif; font-family: var(--body); }
+#dashboardPage{ height: calc(100vh - 52px); }
+#dashboardPage *{ box-sizing: border-box; }
+
+/* .badge base (L485) -- the dashboard rules below override its font, size and shape */
+#dashboardPage .badge{ font-family:var(--mono); font-size:10px; letter-spacing:.04em; padding:2.5px 7px; border-radius:20px; text-transform:uppercase; font-weight:500; white-space:nowrap; }
+
+  /* ===== DASHBOARD PAGE ===== */
+  .dashboard-page{ height:100%; min-height:0; overflow-y:auto; padding:28px 40px 60px; }
+  /* ===== Invoice dashboard (renderDashboard) ===== */
+  .db-head{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding-bottom:14px; border-bottom:1px solid var(--border); }
+  .db-title{ font-family:var(--body); font-size:20px; font-weight:700; color:var(--text); }
+  .db-loading, .db-empty{ color:var(--text-faint); font-size:13px; padding:24px 0; }
+  td.db-empty{ text-align:center; }
+  .db-kpis{ display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; margin-top:18px; }
+  @media (max-width:1100px){ .db-kpis{ grid-template-columns:repeat(2, 1fr); } }
+  .db-kpi{ background:var(--bg-raised); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+  .db-kpi-l{ font-size:12px; color:var(--text-dim); font-weight:500; }
+  .db-kpi-v{ font-family:var(--disp); font-size:24px; font-weight:700; margin-top:6px; color:var(--text); }
+  .db-kpi-s{ font-size:12px; color:var(--text-faint); margin-top:2px; }
+  .db-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+  @media (max-width:1000px){ .db-grid{ grid-template-columns:1fr; } }
+  .db-card{ background:var(--bg-raised); border:1px solid var(--border); border-radius:10px; padding:16px 18px; }
+  .db-card h3{ margin:0 0 4px; font-family:var(--body); font-size:14px; font-weight:700; color:var(--text); }
+  #dashboardPage .badge{ font-family:var(--body); font-size:12px; font-weight:600; letter-spacing:0; text-transform:none; padding:2px 8px; border-radius:5px; }
+  #dashboardPage .badge.bad{ background:#FFE7EC; color:#C0123C; }
+  #dashboardPage .badge.warn{ background:#FCEDB9; color:#A4590C; }
+  #dashboardPage .badge.good{ background:#D7F7C2; color:#1B7A3A; }
+  #dashboardPage .badge.neutral{ background:#EBEEF1; color:#545969; }
+  [data-theme="dark"] #dashboardPage .badge.bad{ background:rgba(255,80,110,.14); color:#FF8FA6; }
+  [data-theme="dark"] #dashboardPage .badge.warn{ background:rgba(252,201,107,.13); color:#FCC96B; }
+  [data-theme="dark"] #dashboardPage .badge.good{ background:rgba(126,224,160,.12); color:#7EE0A0; }
+  [data-theme="dark"] #dashboardPage .badge.neutral{ background:rgba(255,255,255,.07); color:#B4BCC8; }
+  .db-top{ margin-top:0; }
+  .db-pies{ display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:14px; margin-top:14px; }
+  @media (max-width:1100px){ .db-pies{ grid-template-columns:1fr; } }
+  .db-pie{ display:flex; gap:20px; align-items:center; }
+  .db-legend{ display:flex; flex-direction:column; gap:7px; flex:1; min-width:0; }
+  .db-top table{ width:100%; border-collapse:collapse; }
+  .db-top th{ text-align:left; font-size:12px; font-weight:600; color:var(--text-dim); padding:8px 10px; border-bottom:1px solid var(--border); }
+  .db-top td{ padding:9px 10px; border-bottom:1px solid var(--border-soft); font-size:12.5px; color:var(--text); }
+  .db-top tr:last-child td{ border-bottom:none; }
+  .db-top tbody tr{ cursor:pointer; } .db-top tbody tr:hover td{ background:var(--surface); }
+  .db-top .r{ text-align:right; font-variant-numeric:tabular-nums; }
+  .db-top .sub{ display:block; color:var(--text-faint); font-size:11.5px; margin-top:1px; }
+  #dashboardPage .pf-soft{ color:var(--border); }
+
+  /* Dashboard pies: SVG donut with hover tooltip (dbPieTip), legend with count + amount */
+  .db-scroll{ max-height:360px; overflow-y:auto; }
+  .db-donut-svg{ position:relative; width:150px; height:150px; flex-shrink:0; }
+  .db-donut-svg svg path, .db-donut-svg svg circle{ cursor:pointer; transition:opacity .12s; }
+  .db-donut-svg svg:hover path:not(:hover), .db-donut-svg svg:hover circle:not(:hover){ opacity:.55; }
+  .db-donut-svg .mid{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+  .db-donut-svg .mid b{ font:700 24px var(--disp); color:var(--text); }
+  .db-donut-svg .mid span{ font-size:11px; color:var(--text-faint); }
+  .db-pie-tip{ position:fixed; z-index:500; display:none; background:var(--text); color:var(--bg-raised); border-radius:8px; padding:8px 11px; font-size:12px; line-height:1.5; pointer-events:none; box-shadow:0 8px 20px rgba(0,0,0,.2); }
+  .db-pie-tip b{ display:block; font-weight:600; }
+  .db-pie-tip span{ display:block; opacity:.85; }
+
+  /* Dashboard pie legends: one grid per legend so name / count / ₹ / $ form aligned columns */
+  .db-legend.db-legend-grid{ display:grid; grid-template-columns:10px minmax(0,1fr) auto auto auto; column-gap:12px; row-gap:9px; align-items:center; font-size:12.5px; }
+  .db-legend-grid i{ width:10px; height:10px; border-radius:3px; }
+  .db-legend-grid span{ color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .db-legend-grid b{ text-align:right; font-variant-numeric:tabular-nums; color:var(--text); }
+  .db-legend-grid small.amt{ text-align:right; margin:0; min-width:0; color:var(--text-dim); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  /* Dashboard pie centre: ₹ total (amount-based slices) */
+  .db-donut-svg .mid b.amt{ font-size:14px; letter-spacing:-.01em; }
+
+  /* Dashboard: grey line after each pie / table title ("2 of 57 · ₹7.72 L · 8% of total") */
+  .db-meta{ margin-left:8px; font:500 11px var(--body); color:var(--text-faint); letter-spacing:0; }
+}

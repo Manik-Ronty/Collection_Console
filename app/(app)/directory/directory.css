@@ -1,0 +1,461 @@
+@layer components {
+/* Directory page (#ticketsPage) + Edit POCs / Add user popup (#editPocsBackdrop): copied from Index.html
+   (L204-483, 689-733, 788-802, 948-953, 1260-1304, 1676-1681, 1966-1971, 2063-2072, 2386-2443), same order.
+   Rules the live file had unscoped are wrapped in :where(#ticketsPage, #editPocsBackdrop): Next keeps this CSS loaded
+   after you leave the page, and :where adds no specificity, so the cascade is the same as the live one. */
+
+/* Font tokens + page height (the live page fills the window under the 52px top bar) */
+#ticketsPage, #editPocsBackdrop{ --body: var(--font-dm-sans), 'DM Sans', sans-serif; --mono: var(--font-dm-mono), 'DM Mono', monospace; --disp: var(--font-dm-sans), 'DM Sans', sans-serif; font-family: var(--body); }
+#ticketsPage{ height: calc(100vh - 52px); }
+#editPocsBackdrop *{ box-sizing: border-box; }
+
+.app:where(#ticketsPage){ display:grid; grid-template-columns: var(--queue-width, 250px) 6px 1fr; column-gap:0; height:100%; min-height:0; background:var(--bg); }
+
+/* ===== LEFT: QUEUE ===== */
+:where(#ticketsPage, #editPocsBackdrop) .queue{
+  background:var(--bg-raised); border-right:1px solid var(--border-soft);
+  display:flex; flex-direction:column; min-width:0; min-height:0;
+
+}
+/* Drag handle between the queue and the detail pane -- its own thin grid
+   column (see .app above) rather than an absolutely-positioned overlay,
+   so it never sits on top of (and steals hover/click from) either side. */
+:where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle{ cursor:col-resize; position:relative; background:transparent; }
+:where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle::after{
+  content:''; position:absolute; top:0; bottom:0; left:2px; width:2px;
+  background:var(--border-soft); transition:background .12s ease;
+}
+:where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle:hover::after, :where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle.dragging::after{ background:var(--accent); }
+/* Grip in the middle of the handle (⋮) + width badge while dragging (initQueueResize). */
+:where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle{ z-index:4; }
+:where(#ticketsPage, #editPocsBackdrop) .qr-grip{ position:absolute; top:50%; left:-2px; transform:translateY(-50%); width:10px; height:44px; border-radius:6px; background:var(--bg-raised); border:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; box-shadow:0 2px 6px rgba(20,26,36,.08); z-index:1; }
+:where(#ticketsPage, #editPocsBackdrop) .qr-grip i{ width:2px; height:2px; border-radius:50%; background:var(--text-faint); }
+:where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle:hover .qr-grip, :where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle.dragging .qr-grip{ border-color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle:hover .qr-grip i, :where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle.dragging .qr-grip i{ background:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .qr-badge{ display:none; position:absolute; top:12px; left:10px; background:#111827; color:#fff; font:600 11px var(--mono); padding:4px 8px; border-radius:6px; white-space:nowrap; z-index:2; }
+:where(#ticketsPage, #editPocsBackdrop) .queue-resize-handle.dragging .qr-badge{ display:block; }
+/* Narrow list (under 240 px): cards drop the "contacts on file" line. */
+:where(#ticketsPage, #editPocsBackdrop) .queue.qr-compact .ti-sub{ display:none; }
+/* 250 px default list: header stays on one line (Add user button itself unchanged). */
+#ticketsPage .queue-head{ padding-left:16px; padding-right:14px; }
+#ticketsPage .queue-head-row{ gap:8px; }
+#ticketsPage .btn-add-user{ white-space:nowrap; flex-shrink:0; }
+#ticketsPage .queue-head-row > div:first-child{ min-width:0; }
+#ticketsPage .queue .search{ margin-left:16px; margin-right:14px; }
+#ticketsPage .queue-list{ padding-left:16px; padding-right:12px; }
+:where(#ticketsPage, #editPocsBackdrop) .queue-head{ padding:24px 22px 18px; border-bottom:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .queue-head-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+:where(#ticketsPage, #editPocsBackdrop) .tk-icon-btn{ display:inline-flex; align-items:center; gap:7px; }
+:where(#ticketsPage, #editPocsBackdrop) .tk-icon-btn svg{ flex-shrink:0; }
+:where(#ticketsPage, #editPocsBackdrop) .btn-edit-pocs{ background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .btn-edit-pocs:hover{ opacity:.88; }
+
+:where(#ticketsPage, #editPocsBackdrop) .pf-modal.au-modal{
+  width:860px; max-width:94vw; height:820px; max-height:90vh; padding:0;
+  display:flex; flex-direction:column; border-radius:12px; overflow:hidden;
+}
+:where(#ticketsPage, #editPocsBackdrop) .au-dot{ width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+:where(#ticketsPage, #editPocsBackdrop) .au-modal .pf-mail-input{ height:34px; padding:0 12px; font-size:12.5px; border-radius:6px; box-sizing:border-box; }
+:where(#ticketsPage, #editPocsBackdrop) .au-modal select.pf-mail-input{ padding-right:32px; background-position:right 10px center; background-size:14px; }
+/* Add user: message inside the popup footer + mandatory fields highlighted (saveAddUser). */
+:where(#ticketsPage, #editPocsBackdrop) .au-foot-msg{ margin-right:auto; display:none; align-items:center; gap:8px; min-width:0; color:var(--bad); font-size:12.5px; font-weight:500; line-height:1.4; }
+:where(#ticketsPage, #editPocsBackdrop) .au-foot-msg.show{ display:flex; }
+:where(#ticketsPage, #editPocsBackdrop) .au-foot-msg::before{ content:'!'; width:18px; height:18px; flex-shrink:0; border-radius:50%; background:var(--bad); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+:where(#ticketsPage, #editPocsBackdrop) .pf-mail-input.au-invalid{ border-color:var(--bad) !important; background:var(--bad-dim) !important; box-shadow:0 0 0 3px rgba(194,59,62,.12); }
+:where(#ticketsPage, #editPocsBackdrop) .au-field-err{ display:none; margin-top:5px; color:var(--bad); font-size:11.5px; }
+:where(#ticketsPage, #editPocsBackdrop) .au-field-err.show{ display:block; }
+/* ===== Edit POCs -- split view (markup in Tickets.html, behaviour in the EDIT POCS block below). App tokens only. ===== */
+:where(#ticketsPage, #editPocsBackdrop) .pf-modal.au-modal.ep2-modal{ width:1000px; max-width:96vw; height:640px; max-height:92vh; position:relative; border-radius:14px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-hd{ display:flex; align-items:center; gap:10px; flex-shrink:0; padding:14px 20px; border-bottom:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-title{ font-family:var(--disp); font-size:18px; font-weight:600; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-hd .pf-icon-btn-round{ margin-left:auto; } /* stays right when the account name is hidden (Add user) */
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tag{ font-family:var(--mono); font-size:11px; font-weight:500; color:var(--text-dim); border:1px solid var(--border); border-radius:5px; padding:1px 6px; flex-shrink:0; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-acct{ flex:1; min-width:0; font-size:13px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-strip{ display:flex; align-items:center; gap:12px; flex-shrink:0; padding:8px 20px; background:var(--surface-hi); border-bottom:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-chips{ flex:1; min-width:0; display:flex; flex-wrap:wrap; gap:6px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-kv{ display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:20px; border:1px solid var(--border); background:var(--bg-raised); color:var(--text); font-family:var(--body); font-size:12px; text-decoration:none; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-kv i{ font-style:normal; color:var(--text-dim); }
+:where(#ticketsPage, #editPocsBackdrop) a.ep2-kv{ color:var(--accent); font-weight:600; }
+:where(#ticketsPage, #editPocsBackdrop) a.ep2-kv:hover{ border-color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) button.ep2-kv.add{ border-style:dashed; color:var(--text-dim); cursor:pointer; }
+:where(#ticketsPage, #editPocsBackdrop) button.ep2-kv.add:hover{ border-color:var(--accent); color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-link{ flex-shrink:0; border:none; background:none; color:var(--text-dim); font-family:var(--body); font-size:12px; font-weight:600; cursor:pointer; padding:6px 8px; border-radius:6px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-link:hover{ color:var(--text); background:var(--bg-raised); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-acct-grid{ flex-shrink:0; display:grid; grid-template-columns:repeat(3, 1fr); gap:10px 12px; padding:12px 20px; background:var(--surface-hi); border-bottom:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-acct-grid[hidden]{ display:none; }
+/* Add mode (openAddUserModal): taller for the UID row + open account grid; subtitle and UID / Account name row under the header. */
+:where(#ticketsPage, #editPocsBackdrop) .pf-modal.au-modal.ep2-modal.add{ height:780px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-sub{ flex-shrink:0; padding:8px 20px; font-size:11.5px; color:var(--text-dim); border-bottom:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-sub[hidden], :where(#ticketsPage, #editPocsBackdrop) .ep2-idrow[hidden]{ display:none; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-idrow{ flex-shrink:0; display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; padding:12px 20px; border-bottom:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-lab .req{ color:var(--bad); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-ft.add .ep2-state{ display:none; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-f{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+/* Company status: select-looking dropdown that also takes free text (cs* in the EDIT POCS block). */
+:where(#ticketsPage, #editPocsBackdrop) .cs-cb{ position:relative; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-cb input{ padding-right:32px !important; cursor:pointer; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-cb input:focus{ cursor:text; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-cb input::placeholder{ color:var(--text-faint); }
+:where(#ticketsPage, #editPocsBackdrop) .cs-chev{ position:absolute; right:10px; top:50%; width:14px; height:14px; color:#97A5B4; pointer-events:none; transform:translateY(-50%); transition:transform .15s; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-cb.open .cs-chev{ transform:translateY(-50%) rotate(180deg); }
+:where(#ticketsPage, #editPocsBackdrop) .cs-cb.open input{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+:where(#ticketsPage, #editPocsBackdrop) .cs-menu{ display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); max-height:236px; overflow-y:auto; background:var(--bg-raised); border:1px solid var(--border); border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.14); padding:4px; z-index:40; }
+[data-theme="dark"] :where(#ticketsPage, #editPocsBackdrop) .cs-menu{ box-shadow:0 12px 30px rgba(0,0,0,.5); }
+:where(#ticketsPage, #editPocsBackdrop) .cs-cb.open .cs-menu{ display:block; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-opt{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 10px; border-radius:5px; font-size:12.5px; color:var(--text); cursor:pointer; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-opt.hi, :where(#ticketsPage, #editPocsBackdrop) .cs-opt:hover{ background:var(--surface-hi); }
+:where(#ticketsPage, #editPocsBackdrop) .cs-opt.sel{ color:var(--accent); font-weight:600; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-opt.sel::after{ content:'✓'; font-size:12px; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-opt mark{ background:none; color:inherit; font-weight:700; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-opt.blank{ color:var(--text-faint); }
+:where(#ticketsPage, #editPocsBackdrop) .cs-opt.cs-add{ border-top:1px solid var(--border-soft); margin-top:4px; padding-top:9px; color:var(--accent); font-weight:600; }
+:where(#ticketsPage, #editPocsBackdrop) .cs-opt.cs-add.hi, :where(#ticketsPage, #editPocsBackdrop) .cs-opt.cs-add:hover{ background:var(--accent-dim); }
+:where(#ticketsPage, #editPocsBackdrop) .cs-none{ padding:8px 10px; font-size:12px; color:var(--text-faint); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-lab{ font-family:var(--body); font-size:11.5px; font-weight:600; color:var(--text-dim); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-body{ flex:1; min-height:0; display:flex; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-rail{ width:376px; flex-shrink:0; display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tabs{ display:flex; gap:3px; padding:10px 8px 6px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tab{ display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 8px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); font-family:var(--body); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tab b{ font-family:var(--mono); font-size:10px; font-weight:600; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tab:hover{ border-color:var(--text-faint); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tab[aria-pressed="true"]{ background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-list{ flex:1; min-height:0; overflow-y:auto; padding:4px 8px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-grp{ display:flex; align-items:center; gap:6px; padding:12px 8px 5px; font:600 10.5px var(--body); letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-grp:first-child{ padding-top:4px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-grp b{ font:600 10px var(--mono); letter-spacing:0; color:var(--text-dim); background:var(--surface-hi); border-radius:10px; padding:0 6px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-row{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:6px 8px; margin-bottom:2px; border:1px solid transparent; border-radius:9px; background:transparent; color:var(--text); cursor:pointer; font-family:var(--body); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-row:hover{ background:var(--surface-hi); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-row.on{ background:var(--accent-dim); border-color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-av{ width:30px; height:30px; flex-shrink:0; border-radius:50%; background:var(--accent-dim); color:var(--accent); font-size:11.5px; font-weight:700; display:grid; place-items:center; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-row.on .ep2-av{ background:var(--bg-raised); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-av.lg{ width:40px; height:40px; font-size:14px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tx{ flex:1; min-width:0; display:flex; flex-direction:column; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tx b{ font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-tx i{ font-style:normal; font-size:11.5px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; background:var(--good); }
+/* Left the Org. / Incorrect: red "no entry" sign (ring + diagonal) in the same 8px spot, same red as the
+   Directory's "Left the Org." pill (--poc-no; the popup sits outside #ticketsPage, so the reds are set on it too). */
+#editPocsBackdrop{ --poc-no:#B02020; --poc-no-dim:#FDF0F0; }
+[data-theme="dark"] #editPocsBackdrop{ --poc-no:#E5686B; --poc-no-dim:#3A1F22; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-dot.off{ position:relative; box-sizing:border-box; background:none; border:1.5px solid var(--poc-no); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-dot.off::after{ content:''; position:absolute; left:50%; top:50%; width:7px; height:1.5px; background:var(--poc-no); transform:translate(-50%, -50%) rotate(-45deg); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-code{ font-family:var(--mono); font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:5px; border:1px solid var(--border); color:var(--text-dim); flex-shrink:0; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-row.edited .ep2-code{ border-color:var(--warn); color:var(--warn); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-row.isnew .ep2-code{ color:var(--accent); border-color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-add{ margin:8px 10px 10px; height:34px; border:1px dashed var(--border); border-radius:8px; background:none; color:var(--text-dim); font-family:var(--body); font-size:12.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-add:hover{ border-color:var(--accent); color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-add kbd, :where(#ticketsPage, #editPocsBackdrop) .ep2-kbd{ font-family:var(--mono); font-size:10.5px; border:1px solid var(--border); border-radius:4px; padding:0 5px; color:var(--text-dim); background:var(--bg-raised); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-pane{ flex:1; min-width:0; overflow-y:auto; padding:16px 24px; display:flex; flex-direction:column; gap:16px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-ph{ display:flex; align-items:center; gap:12px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-pt{ flex:1; min-width:0; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-pt h3{ font-family:var(--disp); font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-pt p{ font-size:12px; color:var(--text-dim); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-rm{ border:none; background:none; color:var(--text-dim); font-family:var(--body); font-size:12px; font-weight:600; cursor:pointer; padding:6px 10px; border-radius:6px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-rm:hover{ color:var(--bad); background:var(--bad-dim); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-grid .wide{ grid-column:1 / -1; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-pane .pf-mail-input.bad{ border-color:var(--bad) !important; background:var(--bad-dim) !important; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-err{ font-size:11.5px; font-weight:600; color:var(--bad); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-seg{ display:flex; height:34px; border:1px solid var(--border); border-radius:6px; overflow:hidden; background:var(--bg-raised); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-seg button{ flex:1; border:none; background:none; color:var(--text-dim); font-family:var(--body); font-size:12px; font-weight:600; cursor:pointer; padding:0 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-seg button + button{ border-left:1px solid var(--border); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-seg button[aria-pressed="true"]{ background:var(--accent-dim); color:var(--accent); }
+/* Left the Org. / Incorrect (any non-Active status) picked: red, like the Directory pill. */
+:where(#ticketsPage, #editPocsBackdrop) .ep2-seg button[aria-pressed="true"][data-status]:not([data-status=""]){ background:var(--poc-no-dim); color:var(--poc-no); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-chan{ display:flex; flex-wrap:wrap; gap:8px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-pill{ display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border-radius:20px; border:1px dashed var(--border); background:var(--surface); color:var(--text-dim); font-family:var(--body); font-size:12px; font-weight:600; cursor:pointer; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-pill.has{ border-style:solid; border-color:var(--accent); background:var(--accent-dim); color:var(--text); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-pill[aria-pressed="true"]{ border-style:solid; color:var(--text); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-chin{ display:grid; grid-template-columns:repeat(3, 1fr); gap:12px 16px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-ft{ display:flex; align-items:center; gap:8px; flex-shrink:0; padding:12px 24px; border-top:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-ft button{ height:34px; padding:0 16px; font-size:13.5px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-state{ margin-right:auto; display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim); min-width:0; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-state .d{ width:8px; height:8px; border-radius:50%; background:var(--text-faint); flex-shrink:0; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-ft.dirty .ep2-state{ color:var(--text); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-ft.dirty .ep2-state .d{ background:var(--warn); }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-warnmsg{ color:var(--bad); font-weight:600; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-empty{ margin:auto; text-align:center; color:var(--text-dim); font-size:13px; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-toast{ position:absolute; left:50%; bottom:66px; transform:translate(-50%, 8px); background:var(--text); color:var(--bg-raised); padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; max-width:80%; z-index:5; }
+:where(#ticketsPage, #editPocsBackdrop) .ep2-toast.show{ opacity:1; transform:translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce){ :where(#ticketsPage, #editPocsBackdrop) .ep2-toast{ transition:none; } }
+@media (max-width:760px){ :where(#ticketsPage, #editPocsBackdrop) .ep2-body{ flex-direction:column; } :where(#ticketsPage, #editPocsBackdrop) .ep2-rail{ width:auto; max-height:34%; border-right:none; border-bottom:1px solid var(--border-soft); } :where(#ticketsPage, #editPocsBackdrop) .ep2-grid, :where(#ticketsPage, #editPocsBackdrop) .ep2-chin, :where(#ticketsPage, #editPocsBackdrop) .ep2-acct-grid, :where(#ticketsPage, #editPocsBackdrop) .ep2-idrow{ grid-template-columns:1fr; } }
+
+:where(#ticketsPage, #editPocsBackdrop) .queue-head-title{ font-family:var(--disp); font-size:15px; font-weight:600; letter-spacing:-.01em; margin-bottom:2px; }
+:where(#ticketsPage, #editPocsBackdrop) .queue-head-sub{ font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); }
+
+:where(#ticketsPage, #editPocsBackdrop) .search{ margin:18px 22px 12px; display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:9px 11px; }
+:where(#ticketsPage, #editPocsBackdrop) .search input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; font-family:var(--body); }
+:where(#ticketsPage, #editPocsBackdrop) .search input::placeholder{ color:var(--text-faint); }
+
+:where(#ticketsPage, #editPocsBackdrop) .queue-list{ flex:1; min-height:0; overflow-y:auto; padding:6px 16px 24px 26px; }
+:where(#ticketsPage, #editPocsBackdrop) .queue-section-label{ font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint); padding:10px 4px 10px; }
+
+:where(#ticketsPage, #editPocsBackdrop) .ticket-item{
+  position:relative;
+  display:flex; flex-direction:column; gap:7px;
+  padding:13px 14px 13px 22px;
+  border-radius:10px; cursor:pointer;
+  background:var(--surface);
+  border:1px solid var(--border-soft);
+  margin-bottom:9px;
+  margin-left:2px;
+}
+:where(#ticketsPage, #editPocsBackdrop) .ticket-item::before{
+  content:''; position:absolute; left:-2px; top:9px; bottom:9px; width:3px;
+  border-radius:3px; background:var(--border);
+}
+:where(#ticketsPage, #editPocsBackdrop) .ticket-item.good::before{ background:var(--good); }
+:where(#ticketsPage, #editPocsBackdrop) .ticket-item.warn::before{ background:var(--warn); }
+:where(#ticketsPage, #editPocsBackdrop) .ticket-item:hover{ border-color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .ticket-item.active{ background:var(--surface-hi); border-color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .ti-top{ display:flex; justify-content:space-between; align-items:center; }
+:where(#ticketsPage, #editPocsBackdrop) .ti-uid{ font-family:var(--mono); font-size:11px; color:var(--text-faint); }
+:where(#ticketsPage, #editPocsBackdrop) .ti-name{ font-family:var(--disp); font-weight:600; font-size:14.5px; }
+:where(#ticketsPage, #editPocsBackdrop) .ti-sub{ font-size:11.5px; color:var(--text-dim); }
+
+/* ===== POC Data page polish (Design D): same layout, only styling ===== */
+#ticketsPage{ --poc-vc:#B06000; --poc-vc-dim:#FFF3E0; --poc-public:#0E7490; --poc-public-dim:#DDF4F8; --poc-yes:#0D7A5F; --poc-yes-dim:#E6F5F0; --poc-no:#B02020; --poc-no-dim:#FDF0F0; --poc-acq:#5A3EA0; --poc-acq-dim:#F0EAFF; --poc-blue:#1A5FA8; --poc-blue-dim:#EAF2FF; }
+[data-theme="dark"] #ticketsPage{ --poc-vc:#D6A24C; --poc-vc-dim:#3A2E17; --poc-public:#5CC8DC; --poc-public-dim:rgba(92,200,220,.12); --poc-yes:#4FB784; --poc-yes-dim:#1B3428; --poc-no:#E5686B; --poc-no-dim:#3A1F22; --poc-acq:#A78BFA; --poc-acq-dim:rgba(167,139,250,.14); --poc-blue:#7AA7F5; --poc-blue-dim:rgba(122,167,245,.14); }
+/* tags */
+:where(#ticketsPage, #editPocsBackdrop) .poc-tag{ font-family:var(--mono); font-size:10px; font-weight:700; text-transform:uppercase; padding:2px 7px; border-radius:6px; background:var(--surface-hi); color:var(--text-faint); white-space:nowrap; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-tag.tone-vc{ background:var(--poc-vc-dim); color:var(--poc-vc); }
+:where(#ticketsPage, #editPocsBackdrop) .poc-tag.tone-public{ background:var(--poc-public-dim); color:var(--poc-public); }
+:where(#ticketsPage, #editPocsBackdrop) .poc-tag.tone-yes{ background:var(--poc-yes-dim); color:var(--poc-yes); }
+:where(#ticketsPage, #editPocsBackdrop) .poc-tag.tone-no{ background:var(--poc-no-dim); color:var(--poc-no); }
+:where(#ticketsPage, #editPocsBackdrop) .poc-tag.tone-acq{ background:var(--poc-acq-dim); color:var(--poc-acq); }
+/* account list: coloured left edge by tag, hover shadow, selected filled */
+#ticketsPage .ticket-item{ background:var(--bg-raised); transition:box-shadow .15s, border-color .15s; }
+#ticketsPage .ticket-item::before{ background:var(--border); }
+#ticketsPage .ticket-item.tone-vc::before{ background:var(--poc-vc); }
+#ticketsPage .ticket-item.tone-public::before{ background:var(--poc-public); }
+#ticketsPage .ticket-item.tone-yes::before{ background:var(--poc-yes); }
+#ticketsPage .ticket-item.tone-no::before{ background:var(--poc-no); }
+#ticketsPage .ticket-item.tone-acq::before{ background:var(--poc-acq); }
+#ticketsPage .ticket-item:hover{ border-color:var(--border); box-shadow:0 4px 14px rgba(20,16,40,.07); }
+#ticketsPage .ticket-item.active{ background:var(--accent-dim); border-color:var(--accent); }
+#ticketsPage .ticket-item.active::before{ background:var(--accent); }
+#ticketsPage .ti-sub{ display:flex; align-items:center; gap:5px; }
+#ticketsPage .ti-sub svg{ width:11px; height:11px; color:var(--poc-blue); }
+#ticketsPage .queue{ background:var(--bg-raised); }
+#ticketsPage .ticket-item{ gap:4px; padding:11px 14px 11px 18px; }
+#ticketsPage .ti-name{ font-family:var(--body); font-size:13.5px; font-weight:600; line-height:1.35; }
+#ticketsPage .dh-name{ font-size:27px; }
+#ticketsPage .detail{ background:var(--bg); }
+/* header */
+#ticketsPage .detail-header{ background:var(--bg-raised); }
+#ticketsPage .btn-edit-pocs, #ticketsPage .btn-add-user{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; } /* Add user = same purple as Edit POCs */
+#ticketsPage .btn-add-user:hover{ opacity:.88; }
+#ticketsPage .dh-link{ background:var(--surface); border-color:var(--border-soft); border-radius:8px; }
+/* sections: one rounded card each, coloured number badge */
+#ticketsPage .section{ --sc:var(--accent); margin-bottom:22px; padding:0; background:var(--bg-raised); border:1px solid var(--border-soft); border-radius:14px; overflow:hidden; box-shadow:0 1px 2px rgba(20,16,40,.03); }
+#ticketsPage .section:first-child{ margin-top:22px; }
+#ticketsPage .poc-sec-alternate{ --sc:var(--poc-blue); }
+#ticketsPage .poc-sec-cxo{ --sc:#B45309; }
+#ticketsPage .poc-sec-website{ --sc:var(--poc-public); }
+#ticketsPage .section-head{ align-items:center; margin:0; padding:14px 20px; background:var(--surface-hi); /* grey title bar separates the sections */ border-bottom:1px solid var(--border-soft); border-radius:0; }
+#ticketsPage .section-num{ font-weight:600; color:#fff; background:var(--sc); border-radius:6px; padding:2px 7px; }
+#ticketsPage .section-title{ font-size:16px; font-weight:700; }
+#ticketsPage .section-count{ font-size:12px; color:var(--text-faint); }
+#ticketsPage .section-body{ padding:12px 20px 6px; }
+#ticketsPage .sub-label{ color:var(--text-dim); font-weight:600; }
+#ticketsPage .sub-label::before{ content:''; width:6px; height:6px; border-radius:50%; background:var(--sc); }
+/* tables */
+#ticketsPage .contact-table{ background:var(--bg-raised); border-collapse:separate; border-spacing:0; }
+#ticketsPage .contact-table thead th{ background:var(--surface-hi); font-weight:600; }
+#ticketsPage .contact-table tbody tr:hover{ background:var(--surface); }
+#ticketsPage .c-email{ color:var(--text); }
+#ticketsPage .c-phone{ color:var(--text); }
+#ticketsPage .poc-dash{ color:var(--border); }
+#ticketsPage .poc-left-org td{ opacity:.55; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-copyable{ display:inline-flex; align-items:center; gap:6px; max-width:100%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-copy{ border:none; background:none; padding:0; color:var(--text-faint); cursor:pointer; font-size:12px; opacity:0; flex-shrink:0; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-copy:hover{ color:var(--accent); }
+#ticketsPage .contact-table tr:hover .poc-copy{ opacity:1; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-chip{ display:inline-flex !important; align-items:center; gap:5px; font-size:11.5px !important; font-weight:600; padding:3px 9px; border-radius:7px; text-decoration:none; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-chip svg{ width:12px; height:12px; flex-shrink:0; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-chip.li{ background:var(--poc-blue-dim); color:var(--poc-blue) !important; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-chip.tg{ background:var(--poc-public-dim); color:var(--poc-public) !important; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-chip.tw{ background:var(--surface-hi); color:var(--text) !important; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-status{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-status.ok{ background:var(--poc-yes-dim); color:var(--poc-yes); }
+:where(#ticketsPage, #editPocsBackdrop) .poc-status.left{ background:var(--poc-no-dim); color:var(--poc-no); }
+/* empty section */
+#ticketsPage .empty-row{ justify-content:space-between; margin-bottom:14px; border-width:1.5px; border-radius:10px; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-empty-add{ border:1px solid var(--border); background:var(--bg-raised); color:var(--text); border-radius:8px; padding:6px 12px; font-family:var(--body); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-empty-add:hover{ border-color:var(--accent); color:var(--accent); }
+
+/* ===== CENTER: DETAIL ===== */
+:where(#ticketsPage, #editPocsBackdrop) .detail{ min-height:0; height:100%; overflow-y:auto; overflow-x:hidden; position:relative; background:var(--detail-bg); scrollbar-width:thin; scrollbar-color:var(--border) var(--detail-bg); }
+:where(#ticketsPage, #editPocsBackdrop) .detail::-webkit-scrollbar-track{ background:var(--detail-bg); }
+:where(#ticketsPage, #editPocsBackdrop) .detail::-webkit-scrollbar-thumb{ background:var(--border); }
+:where(#ticketsPage, #editPocsBackdrop) .detail-header{ position:sticky; top:0; z-index:5; background:var(--detail-bg); padding:26px 40px 10px 48px; border-bottom:1px solid var(--border-soft); }
+:where(#ticketsPage, #editPocsBackdrop) .dh-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+:where(#ticketsPage, #editPocsBackdrop) .dh-uid-row{ font-family:var(--mono); font-size:11.5px; color:var(--text-faint); letter-spacing:.04em; margin-bottom:6px; }
+:where(#ticketsPage, #editPocsBackdrop) .dh-uid-row span{ color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .dh-name{ font-family:var(--disp); font-size:30px; font-weight:700; letter-spacing:-.015em; }
+:where(#ticketsPage, #editPocsBackdrop) .dh-status{ display:flex; flex-direction:row; align-items:center; gap:8px; flex-shrink:0; }
+:where(#ticketsPage, #editPocsBackdrop) .dh-links{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+:where(#ticketsPage, #editPocsBackdrop) .dh-link{ display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11.5px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); text-decoration:none; }
+:where(#ticketsPage, #editPocsBackdrop) .dh-link:hover{ border-color:var(--accent); color:var(--accent); }
+
+:where(#ticketsPage, #editPocsBackdrop) .sections{ padding:0 12px 60px 48px; }
+:where(#ticketsPage, #editPocsBackdrop) .section{ padding:22px 0; border-bottom:none; scroll-margin-top:110px; }
+:where(#ticketsPage, #editPocsBackdrop) .section:first-child{ padding-top:14px; }
+:where(#ticketsPage, #editPocsBackdrop) .section:last-child{ border-bottom:none; }
+:where(#ticketsPage, #editPocsBackdrop) .section-head{
+  display:flex; align-items:baseline; gap:10px;
+  padding:11px 16px; margin-bottom:12px;
+  background:var(--bg-raised); border:none; border-radius:9px;
+}
+:where(#ticketsPage, #editPocsBackdrop) .section-num{ font-family:var(--mono); font-size:11px; color:var(--text-faint); }
+:where(#ticketsPage, #editPocsBackdrop) .section-title{ font-family:var(--disp); font-size:18px; font-weight:600; letter-spacing:-.01em; }
+:where(#ticketsPage, #editPocsBackdrop) .section-src{ font-size:11.5px; color:var(--text-faint); margin-bottom:18px; }
+
+:where(#ticketsPage, #editPocsBackdrop) .contact-table{ width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--border-soft); border-radius:9px; overflow:hidden; margin-bottom:14px; }
+:where(#ticketsPage, #editPocsBackdrop) .contact-table thead th{ text-align:left; font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); padding:9px 14px; background:var(--bg-raised); border-bottom:1px solid var(--border-soft); font-weight:500; }
+:where(#ticketsPage, #editPocsBackdrop) .contact-table tbody td{ padding:11px 14px; border-bottom:1px solid var(--border-soft); font-size:13px; vertical-align:middle; }
+:where(#ticketsPage, #editPocsBackdrop) .contact-table tbody tr:last-child td{ border-bottom:none; }
+:where(#ticketsPage, #editPocsBackdrop) .contact-table tbody tr:hover{ background:var(--surface-hi); }
+:where(#ticketsPage, #editPocsBackdrop) .c-name{ font-weight:600; }
+:where(#ticketsPage, #editPocsBackdrop) .c-email{ font-family:var(--mono); font-size:12px; color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .c-phone{ font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+:where(#ticketsPage, #editPocsBackdrop) .c-link a{ color:var(--accent); text-decoration:none; font-size:12px; }
+
+:where(#ticketsPage, #editPocsBackdrop) .sub-group{ margin:0 0 14px; }
+:where(#ticketsPage, #editPocsBackdrop) .sub-label{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:4px 0 8px; }
+:where(#ticketsPage, #editPocsBackdrop) .sub-label .cnt{ color:var(--text-faint); }
+:where(#ticketsPage, #editPocsBackdrop) .poc-code{ display:inline-block; font-family:var(--mono); font-size:11px; font-weight:600; padding:2px 7px; border-radius:5px; background:var(--accent-dim); color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .empty-row{ display:flex; align-items:center; gap:10px; padding:14px 16px; border:1px dashed var(--border); border-radius:9px; color:var(--text-faint); font-size:12.5px; }
+
+:where(#ticketsPage, #editPocsBackdrop) .loading, :where(#ticketsPage, #editPocsBackdrop) .empty-state{ padding:60px 48px; color:var(--text-faint); font-family:var(--mono); font-size:12.5px; }
+
+:where(#ticketsPage, #editPocsBackdrop) .pf-filters-btn{
+  font-family:var(--body); font-size:12.5px; font-weight:500; color:var(--text);
+  background:var(--surface); border:1px solid var(--border); border-radius:7px;
+  padding:9px 14px; cursor:pointer;
+}
+:where(#ticketsPage, #editPocsBackdrop) .pf-filters-btn:hover{ border-color:var(--accent); }
+
+:where(#ticketsPage, #editPocsBackdrop) .pf-docs-cancel-btn{
+  font-family:var(--body); font-size:12.5px; font-weight:500; color:var(--text-dim); background:none;
+  border:1px solid var(--border); border-radius:8px; padding:9px 14px; cursor:pointer;
+}
+:where(#ticketsPage, #editPocsBackdrop) .pf-docs-cancel-btn:hover{ border-color:var(--text-faint); color:var(--text); }
+:where(#ticketsPage, #editPocsBackdrop) .pf-docs-add-btn{
+  font-family:var(--body); font-size:12.5px; font-weight:600; color:#fff; background:var(--accent);
+  border:1px solid var(--accent); border-radius:8px; padding:9px 16px; cursor:pointer;
+}
+:where(#ticketsPage, #editPocsBackdrop) .pf-docs-add-btn:hover{ opacity:.92; }
+:where(#ticketsPage, #editPocsBackdrop) .pf-docs-add-btn:disabled{ opacity:.45; cursor:default; }
+
+.pf-modal-backdrop:where(#editPocsBackdrop){
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:100;
+  align-items:center; justify-content:center; padding:24px;
+}
+.pf-modal-backdrop.show:where(#editPocsBackdrop){ display:flex; }
+:where(#ticketsPage, #editPocsBackdrop) .pf-modal-backdrop-top{ z-index:110; } /* stacks the template preview above the mail popup */
+:where(#ticketsPage, #editPocsBackdrop) .pf-modal-backdrop-top2{ z-index:120; } /* stacks the attach-from-Documents picker above the preview popup itself */
+:where(#ticketsPage, #editPocsBackdrop) .pf-modal{
+  width:440px; max-width:100%; max-height:88vh; overflow-y:auto;
+  background:var(--bg-raised); border:1px solid var(--border); border-radius:16px;
+  padding:32px; box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+
+:where(#ticketsPage, #editPocsBackdrop) .pf-mail-input{
+  width:100%; font-family:var(--body); font-size:13.5px; color:var(--text);
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:13px 14px; outline:none; appearance:none;
+}
+:where(#ticketsPage, #editPocsBackdrop) .pf-mail-input:focus{ border-color:var(--accent); }
+:where(#ticketsPage, #editPocsBackdrop) .pf-mail-input:disabled{ opacity:.65; cursor:not-allowed; }
+:where(#ticketsPage, #editPocsBackdrop) .pf-mail-field-hint{ font-size:11px; color:var(--text-faint); margin-top:7px; line-height:1.4; }
+:where(#ticketsPage, #editPocsBackdrop) select.pf-mail-input{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2397A5B4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center; background-size:16px; padding-right:36px;
+}
+
+:where(#ticketsPage, #editPocsBackdrop) .pf-icon-btn-round{
+  width:30px; height:30px; flex-shrink:0; border-radius:50%;
+  border:1px solid var(--border); background:var(--surface); color:var(--text-dim);
+  cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
+}
+:where(#ticketsPage, #editPocsBackdrop) .pf-icon-btn-round:hover{ border-color:var(--accent); color:var(--accent); }
+
+:where(#ticketsPage, #editPocsBackdrop) table.fixed-cols{ table-layout:fixed; width:100%; }
+:where(#ticketsPage, #editPocsBackdrop) table.fixed-cols th, :where(#ticketsPage, #editPocsBackdrop) table.fixed-cols td{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+:where(#ticketsPage, #editPocsBackdrop) table.fixed-cols th{ white-space:normal; vertical-align:bottom; } /* headings wrap instead of being cut */
+:where(#ticketsPage, #editPocsBackdrop) table.fixed-cols td > div, :where(#ticketsPage, #editPocsBackdrop) table.fixed-cols td > a, :where(#ticketsPage, #editPocsBackdrop) table.fixed-cols td > span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+:where(#ticketsPage, #editPocsBackdrop) table.fixed-cols .badge{ display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
+:where(#ticketsPage, #editPocsBackdrop) table.fixed-cols td.pf-loading, :where(#ticketsPage, #editPocsBackdrop) table.fixed-cols td[colspan]{ white-space:normal; }
+
+/* POC Data contact tables */
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(1){ width:6%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(2){ width:13%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(3){ width:12%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(4){ width:22%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(5){ width:13%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(6){ width:9%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(7){ width:8%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(8){ width:8%; }
+:where(#ticketsPage, #editPocsBackdrop) .poc-data-table.fixed-cols th:nth-child(9){ width:9%; }
+
+/* left: Case Console */
+#ticketsPage .btn-add-user, #ticketsPage .btn-edit-pocs{ background:var(--text); color:var(--bg-raised); border:1px solid var(--text); box-shadow:none; border-radius:6px; }
+#ticketsPage .btn-add-user:hover, #ticketsPage .btn-edit-pocs:hover{ background:var(--text); opacity:.85; }
+#ticketsPage .search{ border-radius:6px; padding:7px 10px; }
+#ticketsPage .ticket-item{ gap:2px; margin-bottom:5px; border-radius:8px; padding:8px 10px 8px 14px; transition:box-shadow .15s, border-color .15s; }
+#ticketsPage .ticket-item::before{ top:7px; bottom:7px; }
+#ticketsPage .ticket-item:hover{ box-shadow:0 2px 8px rgba(20,26,36,.06); }
+#ticketsPage .ticket-item.active{ background:var(--accent-dim); border-color:color-mix(in srgb, var(--accent) 45%, transparent); box-shadow:0 6px 18px rgba(13,122,95,.10); }
+[data-theme="dark"] #ticketsPage .ticket-item.active{ background:var(--accent-dim); border-color:var(--accent); }
+#ticketsPage .ti-top{ gap:8px; }
+#ticketsPage .ti-name{ flex:1; min-width:0; font-size:13px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#ticketsPage .poc-tag{ flex-shrink:0; }
+#ticketsPage .ti-sub{ font-size:11.5px; }
+#ticketsPage .ti-uid{ font-size:10.5px; }
+#ticketsPage .poc-tag{ font-size:9.5px; padding:1px 6px; }
+/* compact list header: one row (title + small Add user), tighter search and count label */
+#ticketsPage .queue-head{ padding:14px 14px 12px 16px; }
+#ticketsPage .queue-head-row{ align-items:center; }
+#ticketsPage .queue-head-sub{ display:none; }
+#ticketsPage .btn-add-user{ padding:6px 10px; font-size:12px; }
+#ticketsPage .queue .search{ margin:12px 14px 6px 16px; }
+#ticketsPage .queue-section-label{ padding:6px 2px 6px; }
+#ticketsPage .ti-sub svg{ color:var(--accent); }
+/* right: header -- thin colour strip on top, bigger name, clean link buttons */
+#ticketsPage .detail-header::before{ content:''; position:absolute; left:0; right:0; top:0; height:4px; background:linear-gradient(90deg,#0D7A5F,#4a8c6a,#9BD4C4); }
+#ticketsPage .dh-name{ font-size:28px; letter-spacing:-.015em; }
+#ticketsPage .dh-link{ font-family:var(--body); font-size:12px; font-weight:500; padding:7px 12px; border-radius:9px; background:var(--bg-raised); border-color:var(--border); transition:all .15s; }
+#ticketsPage .dh-link:hover{ border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+/* sections: own colour per section (Billing teal, Alternate blue, CXO amber, Website purple) -- XpenseFlow palette */
+#ticketsPage .poc-sec-alternate{ --sc:var(--poc-blue); }
+#ticketsPage .poc-sec-cxo{ --sc:var(--warn); }
+#ticketsPage .poc-sec-website{ --sc:var(--poc-acq); }
+#ticketsPage .section{ border-radius:16px; box-shadow:0 1px 3px rgba(20,26,36,.04); }
+#ticketsPage .section-head{ padding:16px 22px; background:linear-gradient(180deg,var(--bg-raised),var(--surface-hi)); }
+#ticketsPage .section-num{ font-weight:700; padding:3px 8px; border-radius:7px; }
+#ticketsPage .section-count{ background:var(--surface-hi); padding:2px 9px; border-radius:20px; }
+#ticketsPage .section-body{ padding:16px 22px 10px; }
+/* source groups (CS / BD / OTHER) as small pills with a coloured dot */
+#ticketsPage .sub-label{ font-family:var(--body); font-size:11px; letter-spacing:.02em; gap:8px; margin:2px 0 9px; }
+#ticketsPage .sub-label::before{ display:none; }
+#ticketsPage .sub-label{ color:var(--text-faint); }
+#ticketsPage .poc-sub-pill{ display:inline-flex; align-items:center; gap:6px; background:var(--surface-hi); color:var(--text-dim); font-weight:600; padding:4px 10px; border-radius:20px; }
+#ticketsPage .poc-sub-pill::before{ content:''; width:6px; height:6px; border-radius:50%; background:var(--sc); }
+/* tables: rounded box, normal-case headers, coloured code chip, soft empty dash, accent row hover */
+#ticketsPage .contact-table{ border:1px solid var(--border-soft); border-radius:12px; margin-bottom:16px; }
+#ticketsPage .contact-table thead th{ font-family:var(--body); font-size:11.5px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--text-dim); background:var(--surface-hi); padding:10px 14px; border-bottom:1px solid var(--border-soft); } /* light grey heading row */
+#ticketsPage .contact-table td{ padding:13px 14px; }
+#ticketsPage .contact-table tbody tr{ transition:background .12s; }
+#ticketsPage .contact-table tbody tr:hover{ background:color-mix(in srgb, var(--accent) 5%, transparent); }
+#ticketsPage .poc-code{ font-weight:700; padding:4px 9px; border-radius:7px; background:color-mix(in srgb, var(--sc) 13%, transparent); color:var(--sc); }
+#ticketsPage .c-name{ font-weight:600; }
+#ticketsPage .c-email .poc-copyable::before{ content:'✉'; color:var(--text-faint); margin-right:6px; font-family:var(--body); }
+#ticketsPage .poc-dash{ display:inline-block; width:14px; height:2px; border-radius:2px; background:var(--border-soft); font-size:0; vertical-align:middle; }
+#ticketsPage .poc-chip.li{ border:1px solid color-mix(in srgb, var(--poc-blue) 25%, transparent); border-radius:20px; }
+#ticketsPage .poc-data-table.fixed-cols th:nth-child(1){ width:68px; }
+#ticketsPage .poc-data-table.fixed-cols th:nth-child(4){ width:26%; }
+#ticketsPage .poc-data-table.fixed-cols th:nth-child(5){ width:11%; }
+#ticketsPage .poc-data-table.fixed-cols th:nth-child(6){ width:11%; }
+
+}

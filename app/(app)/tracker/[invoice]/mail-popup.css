@@ -1,0 +1,329 @@
+@layer components {
+/* Tracker mail popup + invoice-page mail button: copied from Index.html (L1089-1117, 1272-1674, 1866-1886, 1908-1917,
+   2141-2157, 2259-2308). Class names are the live app's, so the look is the same. #pfDetailView is .pfx here. */
+
+/* Font + helper tokens the copied rules use */
+.pfx, .pf-modal-backdrop, .tc-close-bk { --body: var(--font-dm-sans), 'DM Sans', sans-serif; --mono: var(--font-dm-mono), 'DM Mono', monospace; --disp: var(--font-dm-sans), 'DM Sans', sans-serif; }
+.pf-modal-backdrop *, .tc-close-bk * { box-sizing: border-box; }
+.empty-row { padding: 14px 4px; color: var(--text-faint); font-size: 13px; }
+
+.pf-qa-btn{ font-family:var(--body); font-size:12.5px; font-weight:500; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:9px 12px; cursor:pointer; text-align:center; }
+.pf-qa-btn:hover{ border-color:var(--accent); }
+.pf-qa-btn:disabled{ opacity:.45; cursor:not-allowed; }
+.pf-icon-btn-round{ width:30px; height:30px; flex-shrink:0; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
+.pf-icon-btn-round:hover{ border-color:var(--accent); color:var(--accent); }
+
+.pf-mail-btn{ flex:1; font-family:var(--body); font-size:14px; font-weight:600; border-radius:10px; padding:13px 14px; cursor:pointer; text-align:center; border:1px solid var(--accent); background:var(--accent); color:#fff; }
+.pf-mail-btn:hover{ opacity:.9; }
+.pf-mail-btn.idle{ background:var(--surface); color:var(--text); border-color:var(--border); font-weight:500; }
+.pf-mail-btn.running{ background:var(--bad-dim); color:var(--bad); border-color:var(--bad); font-weight:500; }
+.pf-mail-btn.scheduled{ background:#FEF6D8; color:#A16207; border-color:#A16207; font-weight:500; }
+[data-theme="dark"] .pf-mail-btn.scheduled{ background:rgba(232,194,90,.13); color:#E8C25A; border-color:#E8C25A; }
+
+/* ===== MAIL POPUP ===== */
+.pf-modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:100; align-items:center; justify-content:center; padding:24px; }
+.pf-modal-backdrop.show{ display:flex; }
+.pf-modal-backdrop-top{ z-index:110; }
+.pf-modal-backdrop-top2{ z-index:120; } /* attach-from-Documents picker above the popup */
+.pf-modal{ width:440px; max-width:100%; max-height:88vh; overflow-y:auto; background:var(--bg-raised); border:1px solid var(--border); border-radius:16px; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+.pf-modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+.pf-modal-title{ font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
+
+.pf-mail-field{ margin-bottom:22px; }
+.pf-mail-field-label{ font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:9px; }
+.pf-mail-input{ width:100%; font-family:var(--body); font-size:13.5px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 14px; outline:none; appearance:none; }
+.pf-mail-input:focus{ border-color:var(--accent); }
+.pf-mail-input:disabled{ opacity:.65; cursor:not-allowed; }
+.pf-mail-field-hint{ font-size:11px; color:var(--text-faint); margin-top:7px; line-height:1.4; }
+select.pf-mail-input{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2397A5B4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; background-size:16px; padding-right:36px; }
+
+/* toggles: "Add payment link", "Also start follow-up" */
+.pf-mail-toggle-row{ display:flex; align-items:center; gap:11px; padding:13px 14px; background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:22px; cursor:pointer; }
+.pf-mail-toggle-row.on{ border-color:var(--accent); background:var(--accent-dim); }
+.pf-mail-switch{ width:34px; height:20px; border-radius:20px; background:var(--border); position:relative; flex-shrink:0; transition:background .15s; }
+.pf-mail-toggle-row.on .pf-mail-switch{ background:var(--accent); }
+.pf-mail-switch::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--bg-raised); transition:left .15s; }
+.pf-mail-toggle-row.on .pf-mail-switch::after{ left:16px; }
+.pf-mail-toggle-text{ font-size:13px; font-weight:500; color:var(--text); }
+.pf-mail-toggle-sub{ font-size:11.5px; color:var(--text-faint); margin-top:1px; }
+
+/* ===== the step-by-step popup (pfRenderFollowUpMailFromInfo) ===== */
+.pf-modal.pf-wiz{ width:720px; padding:0; display:flex; flex-direction:column; overflow:hidden; max-height:90vh; }
+.pf-modal.pf-wiz .pf-modal-header{ padding:18px 22px 12px; margin:0; align-items:flex-start; }
+.pf-modal.pf-wiz .pf-modal-title{ font-family:var(--disp); font-size:19px; font-weight:700; letter-spacing:-.01em; text-transform:none; color:var(--text); }
+.pf-wiz-sub{ font-family:var(--mono); font-size:11.5px; color:var(--text-faint); margin-top:3px; }
+.pf-modal.pf-wiz #pfMailModalBody{ flex:1; min-height:0; display:flex; flex-direction:column; }
+/* loading skeleton (pfMailFormSkeletonHtml) */
+.pf-sk{ display:block; border-radius:8px; background:linear-gradient(90deg, var(--surface-hi) 25%, var(--surface) 37%, var(--surface-hi) 63%); background-size:400% 100%; animation:pfSkShimmer 1.4s ease infinite; }
+@keyframes pfSkShimmer{ 0%{ background-position:100% 50%; } 100%{ background-position:0 50%; } }
+.pf-sk-steps .pf-sk-dot{ width:22px; height:22px; border-radius:50%; flex-shrink:0; }
+.pf-sk-steps .pf-sk-step{ width:90px; height:12px; }
+.pf-sk-steps .pf-sk-line{ flex:1; height:1px; background:var(--border); }
+.pf-sk-body{ display:flex; flex-direction:column; gap:14px; }
+.pf-sk-h{ width:90px; height:10px; margin-bottom:14px; }
+.pf-sk-row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.pf-sk-lbl{ width:56px; height:10px; margin-bottom:8px; }
+.pf-sk-box{ height:42px; }
+.pf-sk-tgl{ display:flex; align-items:center; gap:14px; padding:12px 14px; background:var(--bg-raised); border:1px solid var(--border-soft); border-radius:10px; margin-bottom:8px; }
+.pf-sk-tgl:last-child{ margin-bottom:0; }
+.pf-sk-sw{ width:34px; height:20px; border-radius:20px; flex-shrink:0; }
+.pf-sk-l1{ width:140px; height:12px; margin-bottom:6px; } .pf-sk-l2{ width:240px; max-width:100%; height:10px; }
+.pf-sk-foot{ justify-content:flex-end; }
+.pf-sk-b1{ width:104px; height:40px; border-radius:10px; } .pf-sk-b2{ width:170px; height:40px; border-radius:10px; }
+.pf-wiz-steps{ display:flex; align-items:center; gap:10px; padding:0 22px 14px; border-bottom:1px solid var(--border-soft); flex-shrink:0; }
+.pf-wiz-st{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--text-faint); white-space:nowrap; }
+.pf-wiz-st i{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-style:normal; font-size:11px; border:1.5px solid var(--border); background:var(--bg-raised); }
+.pf-wiz-st.on{ color:var(--text); } .pf-wiz-st.on i{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.pf-wiz-st.done{ color:var(--text-dim); } .pf-wiz-st.done i{ background:var(--good-dim); border-color:var(--good); color:var(--good); }
+.pf-wiz-sline{ flex:1; min-width:14px; height:1.5px; background:var(--border-soft); }
+.pf-wiz-sline.done{ background:var(--good); }
+.pf-wiz-body{ flex:1; min-height:0; overflow-y:auto; padding:18px 22px; }
+#pfWizSetup{ display:flex; flex-direction:column; gap:14px; }
+.pf-wiz-foot{ display:flex; align-items:center; gap:8px; padding:14px 22px; border-top:1px solid var(--border-soft); background:var(--surface); flex-shrink:0; }
+.pf-wiz-sp{ flex:1; }
+.pf-wiz-btn{ display:inline-flex; align-items:center; gap:7px; border:1px solid var(--border); background:var(--bg-raised); color:var(--text); border-radius:10px; padding:10px 16px; font-family:var(--body); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.pf-wiz-btn svg{ width:14px; height:14px; }
+.pf-wiz-btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.pf-wiz-btn.ghost{ border-color:transparent; background:transparent; color:var(--text-dim); }
+.pf-wiz-btn.danger{ background:var(--bad-dim); border-color:var(--bad); color:var(--bad); }
+.pf-wiz-btn:disabled{ opacity:.45; cursor:not-allowed; }
+.pf-wiz-card{ border:1px solid var(--border-soft); border-radius:12px; padding:14px; background:var(--surface); }
+.pf-wiz-card-h{ display:flex; justify-content:space-between; align-items:baseline; font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--text-faint); margin-bottom:10px; }
+.pf-wiz-card-h em{ font-family:var(--body); font-size:11.5px; font-weight:500; letter-spacing:0; text-transform:none; font-style:normal; }
+.pf-wiz-card .pf-mail-input{ padding:10px 12px; background:var(--bg-raised); }
+.pf-wiz-card .pf-mail-toggle-row{ margin-bottom:8px; background:var(--bg-raised); }
+.pf-wiz-card .pf-mail-toggle-row:last-child{ margin-bottom:0; }
+/* Mail template + Region side by side (Region is required) */
+.pf-wiz-tr{ display:grid; grid-template-columns:minmax(0,1fr) 210px; gap:12px; align-items:start; }
+.pf-wiz-tr .pf-mail-field-label{ font-family:var(--body); font-size:12px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--text-dim); margin-bottom:6px; }
+.pf-region-req{ color:var(--bad); margin-left:2px; }
+.pf-rg{ position:relative; }
+.pf-rg-btn{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; cursor:pointer; color:var(--text); }
+.pf-rg-btn.empty{ color:var(--text-faint); }
+.pf-rg-btn svg{ width:16px; height:16px; color:var(--text-faint); flex-shrink:0; transition:transform .15s; }
+.pf-rg.open .pf-rg-btn{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+.pf-rg.open .pf-rg-btn svg{ transform:rotate(180deg); }
+.pf-rg.bad .pf-rg-btn{ border-color:var(--bad); box-shadow:0 0 0 3px var(--bad-dim); }
+.pf-rg-val{ display:flex; align-items:center; gap:8px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.pf-rg-tag{ font:600 10.5px var(--mono); padding:2px 6px; border-radius:5px; background:var(--accent-dim); color:var(--accent); flex-shrink:0; }
+.pf-rg-menu{ display:none; position:absolute; right:0; top:calc(100% + 6px); width:max(100%, 160px); background:var(--bg-raised); border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.14); padding:6px; z-index:20; }
+.pf-rg.open .pf-rg-menu{ display:block; }
+.pf-rg-opt{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 10px; border-radius:7px; cursor:pointer; }
+.pf-rg-opt:hover{ background:var(--surface); }
+.pf-rg-opt.sel{ background:var(--accent-dim); }
+.pf-rg-opt b{ display:block; font-size:13px; font-weight:600; color:var(--text); }
+.pf-rg-opt small{ display:block; font-size:11px; color:var(--text-faint); margin-top:1px; }
+.pf-rg-opt .ck{ color:var(--accent); font-weight:700; visibility:hidden; }
+.pf-rg-opt.sel .ck{ visibility:visible; }
+.pf-region-err{ display:none; color:var(--bad); font-size:11.5px; margin-top:5px; }
+.pf-region-err.show{ display:block; }
+.pf-wiz-region{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--border-soft); max-width:260px; }
+@media (max-width: 640px){ .pf-wiz-tr{ grid-template-columns:1fr; } }
+}
+@layer components {
+/* Payment link: Standard / Prorata panel under the "Add payment link" switch */
+.pf-wiz-card .pf-mail-toggle-row.pf-pl-open{ margin-bottom:0; border-radius:10px 10px 0 0; }
+.pf-pl-panel{ display:none; margin-bottom:8px; padding:12px 14px 14px; background:var(--bg-raised); border:1px solid var(--accent); border-top:none; border-radius:0 0 10px 10px; }
+.pf-pl-panel.show{ display:block; }
+.pf-pl-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.pf-pl-row > span{ font-size:12px; font-weight:600; color:var(--text-dim); }
+.pf-pl-seg{ display:inline-flex; gap:2px; padding:3px; background:var(--surface); border:1px solid var(--border); border-radius:8px; }
+.pf-pl-seg button{ border:none; background:none; padding:6px 16px; border-radius:6px; font:600 12.5px var(--body); color:var(--text-dim); cursor:pointer; }
+.pf-pl-seg button.on{ background:var(--bg-raised); color:var(--accent); box-shadow:0 1px 2px rgba(0,0,0,.1); }
+.pf-pl-stat{ display:flex; align-items:center; gap:8px; margin-top:10px; padding:8px 12px; border-radius:8px; font-size:12px; line-height:1.45; }
+.pf-pl-stat.wait{ color:var(--text-faint); background:var(--surface); }
+.pf-pl-stat.ok{ color:#1E8A5C; background:#E2F5EC; }
+.pf-pl-stat.no{ color:#A4590C; background:#FDF1DC; }
+.pf-pl-stat.info{ color:#2563EB; background:#E3EDFD; }
+[data-theme="dark"] .pf-pl-stat.info{ color:#7AA7F5; background:rgba(122,167,245,.14); }
+.pf-pl-stat code{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:500 11.5px var(--mono); color:var(--text); background:rgba(255,255,255,.7); padding:1px 6px; border-radius:4px; }
+[data-theme="dark"] .pf-pl-stat.ok{ color:#4FB784; background:rgba(79,183,132,.13); }
+[data-theme="dark"] .pf-pl-stat.no{ color:#E8A45A; background:rgba(232,164,90,.13); }
+[data-theme="dark"] .pf-pl-stat code{ background:rgba(0,0,0,.25); }
+.pf-pl-input{ width:100%; margin-top:10px; }
+.pf-pl-input.bad{ border-color:var(--bad); }
+.pf-pl-hint{ font-size:11.5px; color:var(--text-faint); margin-top:6px; }
+.pf-pl-hint.err{ color:var(--bad); }
+.pf-wiz-fields:not(:empty){ margin-top:12px; padding-top:12px; border-top:1px dashed var(--border-soft); }
+.pf-wiz-fields .pf-mail-field{ margin-bottom:10px; }
+.pf-wiz-fields .pf-mail-field:last-child{ margin-bottom:0; }
+.pf-wiz-fields .pf-mail-field-label{ font-family:var(--body); font-size:12px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--text-dim); margin-bottom:6px; }
+.pf-wiz-loading{ display:flex; align-items:center; gap:8px; color:var(--text-faint); font-size:12.5px; }
+.pf-wiz-spin{ width:14px; height:14px; border-radius:50%; border:2px solid var(--border-soft); border-top-color:var(--accent); animation:pfWizSpin .8s linear infinite; }
+@keyframes pfWizSpin{ to{ transform:rotate(360deg); } }
+.pf-wiz-auto{ display:flex; align-items:baseline; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px; }
+.pf-wiz-auto:last-child{ border-bottom:none; }
+.pf-wiz-auto span{ width:70px; color:var(--text-faint); flex-shrink:0; }
+.pf-wiz-auto b{ font-family:var(--mono); font-size:12px; }
+.pf-wiz-auto em{ margin-left:auto; font-style:normal; font-size:11px; color:var(--text-faint); text-align:right; }
+.pf-wiz-fuline{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; padding:9px 12px; border-radius:10px; background:#E3EDFD; color:#2563EB; font-size:12px; }
+.pf-wiz-fuline span{ background:var(--bg-raised); color:var(--text); border-radius:6px; padding:2px 8px; font-weight:600; }
+.pf-wiz-fuline span small{ color:var(--text-faint); font-weight:500; }
+.pf-wiz-fuline em{ margin-left:auto; font-style:normal; font-size:11.5px; }
+[data-theme="dark"] .pf-wiz-fuline{ background:rgba(122,167,245,.14); color:#7AA7F5; }
+.pf-wiz-banner{ padding:10px 12px; border-radius:10px; margin-bottom:12px; font-size:12.5px; line-height:1.5; }
+.pf-wiz-banner.blue{ background:#E3EDFD; color:#2563EB; } .pf-wiz-banner.amber{ background:#FEF6D8; color:#A16207; }
+[data-theme="dark"] .pf-wiz-banner.blue{ background:rgba(122,167,245,.14); color:#7AA7F5; }
+[data-theme="dark"] .pf-wiz-banner.amber{ background:rgba(232,194,90,.13); color:#E8C25A; }
+.pf-wiz .pf-compose{ height:auto; border:1px solid var(--border-soft); border-radius:12px; }
+.pf-wiz .pf-compose-body{ min-height:240px; max-height:46vh; }
+.pf-wiz-runline{ display:flex; align-items:center; gap:8px; margin-top:10px; padding:9px 12px; border-radius:10px; background:#E3EDFD; color:#2563EB; font-size:12px; }
+.pf-wiz-runline i{ width:7px; height:7px; border-radius:50%; background:currentColor; animation:pfxPulse 1.6s infinite; }
+[data-theme="dark"] .pf-wiz-runline{ background:rgba(122,167,245,.14); color:#7AA7F5; }
+/* Send to / Cc pickers */
+.pf-rcp-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media (max-width:700px){ .pf-rcp-row{ grid-template-columns:1fr; } .pf-modal.pf-wiz{ width:100%; } }
+.pf-rcp{ position:relative; min-width:0; }
+.pf-rcp-lbl{ font-size:12px; font-weight:600; color:var(--text-dim); margin-bottom:6px; }
+.pf-rcp-box{ position:relative; min-height:40px; border:1px solid var(--border); border-radius:9px; background:var(--bg-raised); padding:5px 30px 5px 6px; display:flex; flex-wrap:wrap; gap:5px; align-items:center; cursor:pointer; }
+.pf-rcp-box::after{ content:'▾'; position:absolute; right:11px; top:11px; color:var(--text-faint); font-size:12px; }
+.pf-rcp-box.open{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+.pf-rcp-chip{ display:inline-flex; align-items:center; gap:4px; max-width:100%; background:var(--accent-dim); color:var(--accent); border-radius:6px; padding:3px 4px 3px 8px; font-size:12px; font-weight:600; }
+.pf-rcp-chip span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pf-rcp-chip b{ cursor:pointer; padding:0 4px; opacity:.7; } .pf-rcp-chip b:hover{ opacity:1; }
+.pf-rcp-more{ font-size:12px; color:var(--text-dim); padding:3px 6px; }
+.pf-rcp-ph{ color:var(--text-faint); padding:4px 6px; font-size:13px; }
+.pf-rcp-dd{ position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:20; background:var(--bg-raised); border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 34px rgba(0,0,0,.18); overflow:hidden; min-width:280px; }
+.pf-rcp-s{ padding:8px; border-bottom:1px solid var(--border-soft); }
+.pf-rcp-s input{ width:100%; border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-family:var(--body); font-size:13px; background:var(--surface); color:var(--text); outline:none; }
+.pf-rcp-l{ max-height:260px; overflow-y:auto; padding:4px 0; }
+.pf-rcp-g{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 12px 4px; font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); }
+.pf-rcp-g a{ font-family:var(--body); font-size:11.5px; letter-spacing:0; text-transform:none; color:var(--accent); cursor:pointer; flex-shrink:0; }
+.pf-rcp-r{ display:flex; align-items:center; gap:10px; padding:7px 12px; cursor:pointer; }
+.pf-rcp-r:hover{ background:var(--surface-hi); }
+.pf-rcp-r.dis{ opacity:.45; cursor:not-allowed; }
+.pf-rcp-cb{ width:16px; height:16px; border-radius:4px; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; flex-shrink:0; }
+.pf-rcp-r.on .pf-rcp-cb{ background:var(--accent); border-color:var(--accent); }
+.pf-rcp-t{ min-width:0; } .pf-rcp-t b{ display:block; font-size:12.5px; font-weight:600; color:var(--text); }
+.pf-rcp-t small{ display:block; font-size:11.5px; color:var(--text-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pf-rcp-in{ margin-left:auto; font-size:10.5px; color:var(--text-faint); white-space:nowrap; }
+.pf-rcp-none{ padding:10px 12px; color:var(--text-faint); }
+/* Recipients card with no contacts: Add user / Edit POCs (pfRcpNoPocHtml_) */
+.pf-rcp-nopoc{ border:1.5px dashed var(--border); border-radius:10px; padding:14px 16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.pf-rcp-nopoc-ic{ width:38px; height:38px; border-radius:50%; background:var(--surface-hi); color:var(--text-dim); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.pf-rcp-nopoc-ic svg{ width:18px; height:18px; }
+.pf-rcp-nopoc-tx{ flex:1 1 220px; min-width:0; }
+.pf-rcp-nopoc-tx b{ display:block; font-size:13.5px; color:var(--text); }
+.pf-rcp-nopoc-tx span{ font-size:12.5px; color:var(--text-dim); }
+.pf-rcp-nopoc-btn{ border:1px solid #0D7A5F; background:#0D7A5F; color:#fff; border-radius:8px; padding:8px 14px; font:600 13px var(--body); cursor:pointer; white-space:nowrap; }
+.pf-rcp-nopoc-btn.out{ background:var(--bg-raised); color:#0D7A5F; }
+[data-theme="dark"] .pf-rcp-nopoc-btn{ border-color:#3FB58F; background:#3FB58F; color:#0E1A16; }
+[data-theme="dark"] .pf-rcp-nopoc-btn.out{ background:transparent; color:#3FB58F; }
+.pf-rcp-f{ display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-top:1px solid var(--border-soft); font-size:12px; color:var(--text-dim); background:var(--surface); }
+.pf-rcp-f a{ color:var(--accent); font-weight:600; cursor:pointer; }
+}
+@layer components {
+/* Gmail-style compose card (preview steps) */
+.pf-compose{ background:#fff; color:#202124; border-radius:16px; overflow:hidden; font-family:Arial, sans-serif; display:flex; flex-direction:column; height:560px; }
+.pf-compose-field{ display:flex; gap:8px; padding:8px 14px; border-bottom:1px solid #e0e0e0; font-size:13px; align-items:baseline; flex-shrink:0; }
+.pf-compose-field span:first-child{ color:#5f6368; width:52px; flex-shrink:0; }
+.pf-compose-field span:last-child{ word-break:break-all; }
+.pf-compose-subject{ border:none; outline:none; padding:10px 14px; font-size:13px; font-family:Arial, sans-serif; color:#202124; border-bottom:1px solid #e0e0e0; width:100%; flex-shrink:0; }
+.pf-compose-body{ flex:1; padding:14px; font-size:13px; color:#202124; overflow-y:auto; line-height:1.6; outline:none; color-scheme:light; scrollbar-width:thin; scrollbar-color:#c1c1c1 #ffffff; }
+.pf-compose-body::-webkit-scrollbar{ width:8px; }
+.pf-compose-body::-webkit-scrollbar-track{ background:#ffffff; }
+.pf-compose-body::-webkit-scrollbar-thumb{ background:#c1c1c1; border-radius:4px; }
+.pf-compose-body::-webkit-scrollbar-thumb:hover{ background:#a8a8a8; }
+.pf-compose-body a{ color:#1a73e8; cursor:pointer; }
+.pf-compose-body ul, .pf-compose-body ol{ margin:8px 0; padding-left:22px; }
+.pf-compose-body li{ margin-bottom:4px; }
+.pf-compose-attachments{ display:flex; flex-wrap:wrap; gap:8px; padding:0 14px 10px; flex-shrink:0; }
+.pf-attachment-chip{ display:flex; align-items:center; gap:8px; border:1px solid #dadce0; border-radius:8px; padding:6px 10px; font-size:12.5px; color:#3c4043; background:#f8f9fa; max-width:220px; }
+.pf-attachment-chip .pf-att-icon{ width:18px; height:22px; flex-shrink:0; background:#ea4335; border-radius:2px; }
+.pf-attachment-chip .pf-att-meta{ overflow:hidden; }
+.pf-attachment-chip .pf-att-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500; }
+.pf-attachment-chip .pf-att-size{ color:#80868b; font-size:11px; }
+.pf-attachment-chip .pf-att-rm{ margin-left:2px; color:#5f6368; cursor:pointer; flex-shrink:0; }
+.pf-cf-icon{ width:28px; height:28px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#5f6368; cursor:pointer; font-size:13px; font-weight:700; }
+.pf-cf-icon:hover{ background:#f1f3f4; }
+.pf-cf-icon.italic{ font-style:italic; font-weight:400; }
+.pf-cf-icon.underline{ text-decoration:underline; font-weight:400; }
+.pf-cf-divider{ width:1px; height:20px; background:#e0e0e0; margin:0 4px; }
+.pf-compose-toolbar{ display:flex; align-items:center; gap:2px; padding:6px 10px; border-top:1px solid #e0e0e0; flex-shrink:0; }
+.pf-ct-icon{ width:32px; height:32px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#5f6368; cursor:pointer; }
+.pf-ct-icon:hover{ background:#f1f3f4; }
+.pf-ct-spacer{ flex:1; }
+
+/* Attach-from-Documents picker */
+#pfAttachPickerModal{ width:640px; padding:0; }
+.pf-ap{ background:#fff; color:#202124; border-radius:16px; overflow:hidden; font-family:Arial, sans-serif; display:flex; flex-direction:column; max-height:76vh; }
+.pf-ap-head{ padding:16px 20px; border-bottom:1px solid #e0e0e0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.pf-ap-title{ font-size:16px; font-weight:500; }
+.pf-ap-sub{ font-size:12px; color:#5f6368; margin-top:2px; font-family:var(--mono); letter-spacing:.02em; }
+.pf-ap-close{ width:32px; height:32px; border-radius:50%; border:none; background:none; color:#5f6368; cursor:pointer; font-size:15px; flex-shrink:0; }
+.pf-ap-close:hover{ background:#f1f3f4; }
+.pf-ap-list{ flex:1; overflow-y:auto; padding:6px 8px; min-height:120px; }
+.pf-ap-row{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:8px; cursor:pointer; }
+.pf-ap-row:hover{ background:#f8f9fa; }
+.pf-ap-row input[type=checkbox]{ width:17px; height:17px; accent-color:#1a73e8; cursor:pointer; flex-shrink:0; }
+.pf-ap-file-icon{ width:32px; height:32px; border-radius:6px; background:#e8f0fe; color:#1a73e8; display:flex; align-items:center; justify-content:center; flex-shrink:0; text-decoration:none; cursor:pointer; }
+.pf-ap-file-icon:hover{ background:#d2e3fc; }
+.pf-ap-file-icon svg{ width:16px; height:16px; }
+.pf-ap-meta{ flex:1; min-width:0; }
+.pf-ap-type{ font-size:13px; font-weight:500; color:#202124; }
+.pf-ap-detail{ font-size:11.5px; color:#5f6368; margin-top:2px; display:flex; align-items:center; gap:6px; }
+.pf-ap-avatar{ width:18px; height:18px; border-radius:50%; background:#e8f0fe; color:#1a73e8; font-size:8.5px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:var(--mono); }
+.pf-ap-empty{ padding:50px 20px; text-align:center; color:#5f6368; font-size:13px; }
+.pf-ap-foot{ padding:12px 20px; border-top:1px solid #e0e0e0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.pf-ap-count{ font-size:12px; color:#5f6368; }
+.pf-ap-actions{ display:flex; gap:8px; }
+.pf-ap-cancel{ font-size:13px; font-weight:500; color:#5f6368; background:none; border:1px solid #dadce0; border-radius:8px; padding:8px 16px; cursor:pointer; }
+.pf-ap-cancel:hover{ border-color:#5f6368; color:#202124; }
+.pf-ap-attach{ font-size:13px; font-weight:600; color:#fff; background:#1a73e8; border:none; border-radius:8px; padding:8px 18px; cursor:pointer; }
+.pf-ap-attach:disabled{ background:#dadce0; color:#9aa0a6; cursor:default; }
+.pf-ap-attach:not(:disabled):hover{ background:#1765cc; }
+
+/* "Mail scheduled" banner + Cancel scheduled mail states */
+.pf-wiz-sched{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.pf-wiz-sched button{ border:1px solid currentColor; background:transparent; color:inherit; border-radius:8px; padding:5px 12px; font:600 12px var(--body); cursor:pointer; }
+.pf-sc-spin{ display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid currentColor; border-top-color:transparent; vertical-align:-2px; margin-right:6px; animation:tcCloseSpin .8s linear infinite; }
+.pf-wiz-banner.amber.pf-wiz-sched.pf-sc-done{ background:rgba(0,176,80,.12); border-color:rgba(0,176,80,.55); color:#00803A; }
+.pf-wiz-banner.amber.pf-wiz-sched.pf-sc-err{ background:rgba(224,0,0,.08); border-color:rgba(224,0,0,.5); color:#B30000; }
+[data-theme="dark"] .pf-wiz-banner.amber.pf-wiz-sched.pf-sc-done{ background:rgba(0,176,80,.16); border-color:rgba(74,222,128,.5); color:#4ADE80; } [data-theme="dark"] .pf-wiz-banner.amber.pf-wiz-sched.pf-sc-err{ background:rgba(224,0,0,.16); border-color:rgba(248,113,113,.6); color:#F87171; }
+@keyframes pfxPulse{ 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
+
+/* "Pause follow-up?" confirm (same look as Close ticket's) */
+.tc-close-bk{ position:fixed; inset:0; z-index:400; background:rgba(15,20,25,.45); display:none; align-items:center; justify-content:center; }
+.tc-close-bk.show{ display:flex; }
+.tc-close-pop{ width:300px; max-width:calc(100% - 32px); background:var(--bg-raised); border:1px solid var(--border); border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.25); padding:26px 22px 22px; text-align:center; animation:tcClosePopIn .15s ease; }
+@keyframes tcClosePopIn{ from{ transform:scale(.95); opacity:0; } to{ transform:none; opacity:1; } }
+.tc-close-ic{ width:46px; height:46px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.tc-close-ic.ok{ background:var(--good-dim); color:var(--good); font-size:24px; font-weight:700; animation:tcClosePopIn .2s ease; }
+.tc-close-ic.err{ background:var(--bad-dim); color:var(--bad); font-size:22px; font-weight:700; }
+.tc-close-spin{ width:40px; height:40px; border-radius:50%; border:3px solid var(--border-soft); border-top-color:var(--accent); animation:tcCloseSpin .8s linear infinite; }
+@keyframes tcCloseSpin{ to{ transform:rotate(360deg); } }
+.tc-close-t{ font:700 16px var(--disp); color:var(--text); }
+.tc-close-s{ margin-top:4px; font:11.5px var(--mono); color:var(--text-faint); }
+.tc-close-e{ margin-top:8px; color:var(--bad); font-size:12.5px; line-height:1.5; word-break:break-word; }
+.tc-close-q{ margin-top:10px; color:var(--text-dim); font-size:12.5px; line-height:1.5; }
+.tc-close-btns{ display:flex; gap:8px; justify-content:center; }
+.tc-close-ok.danger{ background:var(--bad); border-color:var(--bad); color:#fff; }
+.tc-close-ok{ margin-top:14px; padding:8px 18px; border-radius:9px; border:1px solid var(--border); background:var(--bg-raised); color:var(--text); font:600 12.5px var(--body); cursor:pointer; }
+
+/* tinted action colours: the popup's Send / Start button + "Mail scheduled" banner indigo, Pause confirm orange */
+#pfPopupActionBtn.pf-wiz-btn.primary, .pf-wiz-banner.amber.pf-wiz-sched{ background:rgba(99,102,241,.12); border:1px solid rgba(99,102,241,.55); color:#3F42C8; }
+[data-theme="dark"] #pfPopupActionBtn.pf-wiz-btn.primary, [data-theme="dark"] .pf-wiz-banner.amber.pf-wiz-sched{ background:rgba(99,102,241,.18); border-color:rgba(99,102,241,.55); color:#A5A8FF; }
+#pfStopGo.tc-close-ok.danger{ background:rgba(240,149,44,.15); border-color:rgba(240,149,44,.6); color:#A85A06; }
+[data-theme="dark"] #pfStopGo.tc-close-ok.danger{ background:rgba(240,149,44,.21); border-color:rgba(240,149,44,.6); color:#F5B26B; }
+
+/* the popup's own accent is blue (only inside #pfMailModal) */
+#pfMailModal{ --accent:#5457E0; --accent-dim:rgba(99,102,241,.12); }
+[data-theme="dark"] #pfMailModal{ --accent:#A5A8FF; --accent-dim:rgba(99,102,241,.20); }
+#pfMailModal .pf-wiz-st.on i, #pfMailModal .pf-wiz-st.done i, #pfMailModal .pf-wiz-btn.primary{ background:rgba(99,102,241,.12); border-color:rgba(99,102,241,.55); color:#3F42C8; }
+[data-theme="dark"] #pfMailModal .pf-wiz-st.on i, [data-theme="dark"] #pfMailModal .pf-wiz-st.done i, [data-theme="dark"] #pfMailModal .pf-wiz-btn.primary{ background:rgba(99,102,241,.18); border-color:rgba(99,102,241,.55); color:#A5A8FF; }
+#pfMailModal .pf-wiz-sline.done{ background:rgba(99,102,241,.55); }
+
+/* Invoice page: the mail button + gear badge (Index.html L1876-1886, 2263-2272) */
+.pfx .pf-detail-mail-action-wrap .pf-mail-btn{ border-radius:9px; padding:9px 18px; font-weight:600; font-size:13px; flex:none; }
+.pfx .pfx-mail-cluster{ position:relative; }
+.pfx .pfx-mail-settings-btn{ position:absolute; top:-9px; right:-9px; z-index:1; width:22px; height:22px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid var(--border); background:var(--bg-raised); color:var(--text-dim); box-shadow:0 1px 3px rgba(0,0,0,.15); }
+.pfx .pfx-mail-settings-btn svg{ width:12px; height:12px; }
+.pfx .pfx-mail-settings-btn:hover{ border-color:var(--pfx-accent); color:var(--pfx-accent); }
+.pfx .pf-detail-mail-action-wrap .pf-mail-btn:not(.idle):not(.running):not(.scheduled), .pfx .pf-detail-mail-action-wrap .pf-mail-btn.idle{ background:rgba(99,102,241,0.12); border-color:rgba(99,102,241,0.55); color:#3F42C8; font-weight:600; }
+[data-theme="dark"] .pfx .pf-detail-mail-action-wrap .pf-mail-btn:not(.idle):not(.running):not(.scheduled), [data-theme="dark"] .pfx .pf-detail-mail-action-wrap .pf-mail-btn.idle{ background:rgba(99,102,241,0.18); border-color:rgba(99,102,241,0.55); color:#A5A8FF; }
+.pfx .pf-detail-mail-action-wrap .pf-mail-btn.scheduled:not(.idle):not(.running){ background:rgba(99,102,241,.12); border-color:rgba(99,102,241,.55); color:#3F42C8; font-weight:600; }
+[data-theme="dark"] .pfx .pf-detail-mail-action-wrap .pf-mail-btn.scheduled:not(.idle):not(.running){ background:rgba(99,102,241,.18); border-color:rgba(99,102,241,.55); color:#A5A8FF; }
+.pfx .pf-detail-mail-action-wrap .pf-mail-btn.running{ background:rgba(240,149,44,0.15); border-color:rgba(240,149,44,0.6); color:#A85A06; font-weight:600; }
+[data-theme="dark"] .pfx .pf-detail-mail-action-wrap .pf-mail-btn.running{ background:rgba(240,149,44,0.21); border-color:rgba(240,149,44,0.6); color:#F5B26B; }
+.pfx .pf-detail-mail-action-wrap .pf-mail-btn:disabled{ opacity:.45; cursor:not-allowed; }
+}

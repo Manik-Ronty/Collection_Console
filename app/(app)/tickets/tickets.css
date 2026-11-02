@@ -1,0 +1,577 @@
+@layer components {
+/* Ticket Console (#ticketConsolePage) + its Close ticket / Pause popups: copied from Index.html and Activity.html,
+   same order, values unchanged. Index.html L492-686, 792 (.empty-row, scoped here), 1085-1111, 1149-1165, 1293-1304,
+   1676-1688, 1715-1753, 1758-1766, 1785, 1915, 2091-2107, 2141-2157, 2162-2181, 2186-2250, 2309-2313, 2328-2383;
+   Activity.html L53, 56-104 (chat bubbles, system strips, composer, Live dot). */
+
+/* Font tokens + page height (the live page fills the window under the 52px top bar; the list and the sidebar each scroll) */
+#ticketConsolePage, .tc-close-bk{ --body: var(--font-dm-sans), 'DM Sans', sans-serif; --mono: var(--font-dm-mono), 'DM Mono', monospace; --disp: var(--font-dm-sans), 'DM Sans', sans-serif; font-family: var(--body); }
+#ticketConsolePage *, .tc-close-bk *{ box-sizing: border-box; }
+
+  /* ===== Ticket Console (separate tab -- reads "Ticketing_console") ===== */
+  .tc-page{ display:none; flex-direction:column; height:100%; min-height:0; }
+  .tc-toolbar{ display:flex; align-items:center; justify-content:space-between; padding:20px 28px; border-bottom:1px solid var(--border-soft); flex-shrink:0; }
+  .tc-title{ font-family:var(--disp); font-size:19px; font-weight:700; }
+  .tc-sub{ font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); margin-top:3px; }
+  .tc-search{ display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:9px 12px; width:260px; flex-shrink:0; }
+  .tc-search svg{ width:14px; height:14px; color:var(--text-faint); flex-shrink:0; }
+  .tc-search input{ background:none; border:none; outline:none; color:var(--text); font-size:12.5px; width:100%; font-family:var(--body); }
+  .tc-body{ flex:1; min-height:0; display:flex; }
+  .tc-table-wrap{ flex:1; min-width:0; overflow:auto; padding:0 28px 28px; }
+  table.tc-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.tc-table th{
+    position:sticky; top:0; background:var(--bg); text-align:left; font-family:var(--mono); font-size:10px;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); padding:12px 14px; font-weight:500;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  /* Header stays fixed while the ticket list scrolls (.tc-table-wrap is the scroll box): above row content, line kept visible. */
+  table.tc-table thead th{ z-index:3; box-shadow:inset 0 -1px 0 var(--border); }
+  table.tc-table td{ padding:13px 14px; border-bottom:1px solid var(--border-soft); white-space:nowrap; }
+  table.tc-table tbody tr{ cursor:pointer; }
+  table.tc-table tbody tr:hover{ background:var(--surface); }
+  table.tc-table tbody tr.active{ background:var(--accent-dim); }
+  .tc-ticket-id{ font-family:var(--mono); color:var(--accent); }
+  .tc-amount{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
+  .tc-uid{ font-family:var(--mono); color:var(--text-faint); }
+  .tc-mail-link-cell{ width:1%; text-align:center; }
+  .tc-mail-link{ display:inline-flex; align-items:center; justify-content:center; color:var(--accent); }
+  .tc-mail-link:hover{ color:var(--accent); }
+
+  /* Sidebar sits as a normal flex sibling of .tc-table-wrap (flex:1) inside
+     .tc-body -- opening it shrinks the table in place, it never overlays
+     on top of it. */
+  .tc-sidebar{ width:500px; max-width:55vw; flex-shrink:0; border-left:1px solid var(--border-soft); background:var(--bg-raised); flex-direction:column; overflow-y:auto; }
+  .tc-sidebar-head{ position:relative; padding:20px 24px; border-bottom:1px solid var(--border-soft); flex-shrink:0; }
+  /* Close + the new Comments toggle sit together in one row now (see
+     tc-comments-toggle below), instead of Close being the only absolutely-
+     positioned button. */
+  .tc-sidebar-head-btns{ position:absolute; top:16px; right:18px; display:flex; gap:8px; }
+  .tc-sidebar-close{ width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); cursor:pointer; }
+  .tc-sidebar-close:hover{ border-color:var(--accent); color:var(--accent); }
+  /* Comments toggle -- opens the same Collection_comments_HT thread the
+     Proforma tab shows for this invoice (see tcToggleComments). Lit
+     (accent) while the Comments view is open. */
+  .tc-comments-toggle{
+    width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:var(--surface);
+    color:var(--text-dim); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .tc-comments-toggle:hover{ border-color:var(--accent); color:var(--accent); }
+  .tc-comments-toggle.active{ background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+  /* Comments view = the Tracker's panel: the sidebar stops scrolling as a
+     whole, only the feed scrolls, the input stays at the bottom. */
+  .tc-sidebar.tc-comments-mode{ overflow:hidden; }
+  .tc-sidebar.tc-comments-mode .tc-sidebar-body{ flex:1; min-height:0; display:flex; flex-direction:column; padding-bottom:18px; }
+  .tc-comments-view{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  .tc-comments-view .pf-comments-feed{ padding-right:4px; }
+  .tc-comments-count{ font-family:var(--body); font-size:12px; font-weight:500; color:var(--text-faint); margin-left:8px; }
+  .tc-sidebar-eyebrow{ font-family:var(--mono); font-size:10.5px; color:var(--accent); letter-spacing:.04em; margin-bottom:6px; padding-right:72px; }
+  .tc-sidebar-name{ font-family:var(--disp); font-size:18px; font-weight:700; padding-right:72px; }
+  .tc-sidebar-body{ padding:20px 24px 32px; }
+
+  /* ---- Sidebar look: header band, ID chip, status chips, stats strip, button row, detail cards ---- */
+  .tc-sidebar-head{ background:var(--bg-raised); }
+  .tc-sidebar-head-btns .tc-sidebar-close, .tc-sidebar-head-btns .tc-comments-toggle{ border-radius:8px; width:30px; height:30px; }
+  .tc-id-chip{ display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; font-weight:600; color:var(--accent); background:var(--surface-hi); border:1px solid transparent; padding:3px 4px 3px 9px; border-radius:7px; }
+  .tc-id-copy{ border:none; background:none; color:var(--text-faint); cursor:pointer; font-size:12px; padding:0 4px; }
+  .tc-id-copy:hover{ color:var(--accent); }
+  .tc-sidebar-name{ font-size:20px; margin-top:12px; }
+  .tc-sidebar-meta{ font-family:var(--mono); font-size:11.5px; color:var(--text-faint); margin-top:4px; }
+  .tc-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tc-chips:empty{ display:none; }
+  .tc-chips .tc-fu-note{ margin-top:12px; }
+  .tc-fu-note.snoozed{ background:#FEF6D8; color:#A16207; border-color:#E9C46A; }
+  [data-theme="dark"] .tc-fu-note.snoozed{ background:rgba(232,194,90,.13); color:#E8C25A; border-color:rgba(232,194,90,.45); }
+  /* Start/Stop and Close only as wide as their text; Snooze takes the rest ("Snoozed till Oct 15"). */
+  .tc-actions{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:8px; margin-bottom:4px; }
+  .tc-btn{ display:flex; align-items:center; justify-content:center; gap:7px; min-width:0; padding:10px 12px; border-radius:10px; border:1px solid; font-family:var(--body); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .tc-btn span{ overflow:hidden; text-overflow:ellipsis; }
+  .tc-btn svg{ width:14px; height:14px; flex-shrink:0; }
+  .tc-btn:hover{ filter:brightness(.97); }
+  .tc-btn.start{ background:#E3EDFD; color:#2563EB; border-color:#2563EB; }
+  .tc-btn.stop{ background:#FBE4E4; color:#C23B3E; border-color:#C23B3E; }
+  .tc-btn.snooze{ background:#FEF6D8; color:#A16207; border-color:#E9C46A; }
+  .tc-btn.snooze.on{ border-color:#A16207; }
+  .tc-btn.close{ background:var(--bg-raised); color:var(--text-dim); border-color:var(--border); }
+  .tc-btn.close:hover{ color:var(--text); border-color:var(--text-faint); }
+  [data-theme="dark"] .tc-btn.start{ background:rgba(122,167,245,.14); color:#7AA7F5; border-color:#7AA7F5; }
+  [data-theme="dark"] .tc-btn.stop{ background:#3A1F22; color:#E5686B; border-color:#E5686B; }
+  [data-theme="dark"] .tc-btn.snooze{ background:rgba(232,194,90,.13); color:#E8C25A; border-color:rgba(232,194,90,.45); }
+  [data-theme="dark"] .tc-btn.snooze.on{ border-color:#E8C25A; }
+  .tc-sec{ margin-top:18px; }
+  .tc-sec-h{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); margin-bottom:8px; }
+  .tc-sec-h::after{ content:''; flex:1; height:1px; background:var(--border-soft); }
+  .tc-card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:10px; }
+  .tc-kv{ display:flex; justify-content:space-between; align-items:center; gap:14px; padding:9px 12px; border-bottom:1px solid var(--border-soft); }
+  .tc-kv:last-child{ border-bottom:none; }
+  .tc-kv-k{ font-size:12px; color:var(--text-dim); flex-shrink:0; }
+  .tc-kv-v{ font-size:12.5px; color:var(--text); font-weight:500; text-align:right; min-width:0; word-break:break-word; }
+  .tc-mono{ font-family:var(--mono); font-size:12px; }
+  .tc-tag{ font-family:var(--mono); font-size:11px; font-weight:600; background:var(--surface-hi); color:var(--text-dim); padding:2px 8px; border-radius:6px; }
+  .tc-gmail-link{ color:var(--accent); font-weight:600; text-decoration:none; }
+  .tc-gmail-link:hover{ text-decoration:underline; }
+  .tc-snooze-pop.pf-snooze-pop{ margin:8px 0 4px; }
+  .tc-name-row{ display:flex; justify-content:space-between; align-items:flex-end; gap:14px; }
+  .tc-name-row > div:first-child{ min-width:0; }
+  .tc-name-row .tc-sidebar-name{ padding-right:0; }
+  .tc-sidebar-amount{ text-align:right; flex-shrink:0; }
+  .tc-amt-m{ font-family:var(--disp); font-size:22px; font-weight:700; }
+  .tc-amt-s{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+  .tc-fs{ background:var(--surface); border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+  .tc-fs-l{ font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); margin-bottom:8px; }
+  .tc-fs-row{ display:flex; gap:8px; }
+  .tc-fs-row .tc-fs-select{ flex:1; min-width:0; padding:8px 10px; border-radius:9px; }
+  .tc-fs-row .pf-qa-btn{ flex-shrink:0; padding:0 16px; border-radius:9px; }
+  .tc-fs-select.fs-paid{ background:var(--good-dim); color:var(--good); border-color:var(--good); font-weight:600; }
+  .tc-fs-select.fs-cancel{ background:var(--surface-hi); color:var(--text-dim); border-color:var(--text-faint); font-weight:600; }
+  .tc-fs-select.fs-tbd{ background:#FFEDD5; color:#C2410C; border-color:#EA580C; font-weight:600; }
+  [data-theme="dark"] .tc-fs-select.fs-tbd{ background:rgba(251,146,60,.14); color:#FB923C; border-color:#FB923C; }
+  .tc-fs-select option{ background:var(--bg-raised); color:var(--text); font-weight:400; }
+  /* Settings gear as a small round badge on the Start/Stop button's top-right corner (same as the Tracker's). */
+  .tc-btn.start, .tc-btn.stop{ position:relative; overflow:visible; margin-right:6px; }
+  .tc-actions{ padding-top:9px; }
+  .tc-gear{ position:absolute; top:-9px; right:-9px; z-index:1; width:22px; height:22px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--border); background:var(--bg-raised); color:var(--text-dim); box-shadow:0 1px 3px rgba(0,0,0,.15); }
+  .tc-gear svg{ width:12px; height:12px; }
+  .tc-btn:hover .tc-gear{ color:var(--accent); border-color:var(--accent); }
+
+  /* top quick-action row */
+  .tc-action-row{ display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; background:var(--surface); border:1px solid var(--border-soft); border-radius:12px; padding:16px 8px; margin-bottom:20px; }
+  .tc-action-btn{ display:flex; flex-direction:column; align-items:center; gap:8px; background:none; border:none; cursor:pointer; padding:2px; }
+  .tc-action-icon{
+    width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:15px; font-weight:700; flex-shrink:0;
+  }
+  /* Light fill + coloured text/border, like the Tracker's buttons: Start Follow-up blue, Snooze yellow. */
+  .tc-action-icon.c-blue{ background:#E3EDFD; color:#2563EB; border:1px solid #2563EB; }
+  .tc-action-icon.c-red-lt{ background:#FBE4E4; color:#C23B3E; border:1px solid #C23B3E; font-size:12px; }
+  .tc-action-btn.fu-start span.tc-action-label{ color:#2563EB; font-weight:600; }
+  .tc-action-btn.fu-stop span.tc-action-label{ color:#C23B3E; font-weight:600; }
+  [data-theme="dark"] .tc-action-icon.c-red-lt{ background:#3A1F22; color:#E5686B; border-color:#E5686B; }
+  [data-theme="dark"] .tc-action-btn.fu-start span.tc-action-label{ color:#7AA7F5; }
+  [data-theme="dark"] .tc-action-btn.fu-stop span.tc-action-label{ color:#E5686B; }
+  .tc-fu-note{ display:inline-flex; align-items:center; gap:7px; margin-top:10px; padding:4px 12px; border-radius:20px; border:1px solid; font-size:11.5px; font-weight:600; }
+  .tc-fu-note .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .tc-fu-note.started{ background:#E3EDFD; color:#2563EB; border-color:#2563EB; }
+  .tc-fu-note.started .dot{ animation:pfxPulse 1.6s infinite; }
+  .tc-fu-note.stopped{ background:#FBE4E4; color:#C23B3E; border-color:#C23B3E; }
+  [data-theme="dark"] .tc-fu-note.started{ background:rgba(122,167,245,.14); color:#7AA7F5; border-color:#7AA7F5; }
+  [data-theme="dark"] .tc-fu-note.stopped{ background:#3A1F22; color:#E5686B; border-color:#E5686B; }
+  .tc-action-icon.c-yellow{ background:#FEF6D8; color:#A16207; border:1px solid #E9C46A; font-size:13px; }
+  .tc-action-btn.snoozed .tc-action-icon.c-yellow{ border-color:#A16207; }
+  .tc-action-btn.snoozed span.tc-action-label{ color:#A16207; font-weight:600; }
+  [data-theme="dark"] .tc-action-icon.c-blue{ background:rgba(122,167,245,.14); color:#7AA7F5; border-color:#7AA7F5; }
+  [data-theme="dark"] .tc-action-icon.c-yellow{ background:rgba(232,194,90,.13); color:#E8C25A; border-color:rgba(232,194,90,.45); }
+  [data-theme="dark"] .tc-action-btn.snoozed .tc-action-icon.c-yellow{ border-color:#E8C25A; }
+  [data-theme="dark"] .tc-action-btn.snoozed span.tc-action-label{ color:#E8C25A; }
+  /* Snooze popover in the sidebar: in the flow under the action row, not floating. */
+  .tc-snooze-pop.pf-snooze-pop{ position:static; width:auto; margin:-8px 0 20px; box-shadow:0 8px 24px rgba(20,16,40,.10); }
+  .tc-action-icon.c-green{ background:var(--good); }
+  .tc-action-icon.c-purple{ background:#9B5DE5; }
+  .tc-action-icon.c-red{ background:var(--bad); }
+  .tc-action-icon.c-dark{ background:var(--surface-hi); border:1px solid var(--border); color:var(--text-dim); }
+  .tc-action-btn span.tc-action-label{ font-size:10.5px; line-height:1.3; color:var(--text-dim); text-align:center; }
+  .tc-action-btn:hover span.tc-action-label{ color:var(--text); }
+  .tc-action-btn:disabled{ cursor:default; opacity:.4; }
+  .tc-action-btn:disabled:hover span.tc-action-label{ color:var(--text-dim); }
+
+  /* editable fields card */
+  .tc-edit-card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:12px; padding:16px; margin-bottom:22px; }
+  .tc-edit-row{ margin-bottom:14px; }
+  .tc-edit-row:last-of-type{ margin-bottom:0; }
+  .tc-edit-label{ font-size:11px; color:var(--text-faint); margin-bottom:7px; }
+  .tc-edit-input{
+    width:100%; height:36px; padding:0 12px; font-family:var(--body); font-size:12.5px; color:var(--text);
+    background:var(--bg-raised); border:1px solid var(--border); border-radius:7px; outline:none; box-sizing:border-box;
+  }
+  .tc-edit-input:focus{ border-color:var(--accent); }
+  .tc-edit-textarea{ height:auto; min-height:60px; padding:9px 12px; resize:vertical; line-height:1.4; }
+  .tc-edit-hint{ font-size:10.5px; color:var(--text-faint); margin-top:5px; }
+  .tc-save-btn:disabled{ opacity:.45; cursor:default; }
+  .tc-stepper{ display:flex; align-items:center; border:1px solid var(--border); border-radius:7px; background:var(--bg-raised); overflow:hidden; }
+  .tc-stepper button{ width:36px; height:36px; flex-shrink:0; border:none; background:none; color:var(--text-dim); font-size:16px; cursor:pointer; }
+  .tc-stepper button:hover{ background:var(--surface-hi); color:var(--text); }
+  .tc-stepper input{ flex:1; min-width:0; height:36px; border:none; background:none; color:var(--text); font-size:12.5px; text-align:center; outline:none; font-family:var(--mono); }
+  .tc-save-btn{
+    width:100%; margin-top:16px; height:36px; font-family:var(--body); font-size:12.5px; font-weight:600; color:#fff;
+    background:var(--accent); border:1px solid var(--accent); border-radius:7px; cursor:pointer;
+  }
+  .tc-save-btn:hover{ opacity:.92; }
+
+  /* generic detail fields -- horizontal label-left/value-right rows */
+  .tc-det-section-head{ font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:6px; padding-bottom:8px; border-bottom:1px solid var(--border-soft); }
+  .tc-det-field{ display:flex; align-items:baseline; gap:14px; padding:11px 0; border-bottom:1px solid var(--border-soft); }
+  .tc-det-field:last-child{ border-bottom:none; }
+  .tc-det-field-label{ flex:0 0 42%; font-size:11.5px; color:var(--text-faint); }
+  #ticketConsolePage.tc-page{ display:flex; flex:1; min-width:0; height:calc(100vh - 52px); } /* live: switchPage shows it; fills <main> without growing past it */
+
+  #ticketConsolePage .empty-row{ display:flex; align-items:center; gap:10px; padding:14px 16px; border:1px dashed var(--border); border-radius:9px; color:var(--text-faint); font-size:12.5px; }
+
+  .pf-qa-select{
+    font-family:var(--body); font-size:12.5px; color:var(--text); background:var(--surface);
+    border:1px solid var(--border); border-radius:6px; padding:7px 8px;
+  }
+  .pf-qa-btn{
+    font-family:var(--body); font-size:12.5px; font-weight:500; color:var(--text);
+    background:var(--surface); border:1px solid var(--border); border-radius:7px;
+    padding:9px 12px; cursor:pointer; text-align:center;
+  }
+  .pf-qa-btn:hover{ border-color:var(--accent); }
+  .pf-qa-btn.dark{ background:var(--text); color:var(--bg-raised); border-color:var(--text); }
+  .pf-qa-btn.dark:hover{ opacity:.9; }
+  .pf-qa-btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .pf-qa-btn.primary:hover{ opacity:.9; }
+  .pf-qa-btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .pf-qa-btn:disabled:hover{ border-color:var(--border); }
+
+  .pf-mail-btn{
+    flex:1; font-family:var(--body); font-size:14px; font-weight:600;
+    border-radius:10px; padding:13px 14px; cursor:pointer; text-align:center;
+    border:1px solid var(--accent); background:var(--accent); color:#fff;
+  }
+  .pf-mail-btn:hover{ opacity:.9; }
+  .pf-mail-btn.idle{ background:var(--surface); color:var(--text); border-color:var(--border); font-weight:500; }
+  .pf-mail-btn.running{ background:var(--bad-dim); color:var(--bad); border-color:var(--bad); font-weight:500; }
+  .pf-mail-btn.scheduled{ background:#FEF6D8; color:#A16207; border-color:#A16207; font-weight:500; }
+  [data-theme="dark"] .pf-mail-btn.scheduled{ background:rgba(232,194,90,.13); color:#E8C25A; border-color:#E8C25A; }
+
+  .pf-snooze-pop{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:20; width:290px;
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:12px; box-shadow:0 12px 30px rgba(0,0,0,.4);
+  }
+  .pf-snooze-pop .pf-mail-input{ margin-bottom:10px; }
+  .pf-snooze-pop-row{ display:flex; gap:8px; }
+  .pf-snooze-pop-row .pf-qa-btn, .pf-snooze-pop-row .pf-mail-btn{ flex:1; padding:9px 10px; font-size:13px; }
+  .pf-snooze-pop-row .pf-mail-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  #pfDetailView .pf-detail-mail-action-wrap .pf-mail-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .pf-snooze-latest{ margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--border-soft); font-size:11.5px; color:var(--text-dim); line-height:1.5; }
+  .pf-snooze-latest b{ color:var(--text); font-weight:600; }
+  .pf-snooze-latest-empty{ color:var(--text-faint); font-style:italic; }
+  .pf-snooze-pop textarea.pf-mail-input{ resize:vertical; min-height:56px; padding:9px 11px; font-size:12.5px; line-height:1.4; }
+  .pf-snooze-hint{ font-size:10.5px; color:var(--text-faint); margin:-6px 0 10px; }
+  .pf-snooze-check{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text); margin:0 0 12px; cursor:pointer; user-select:none; }
+  .pf-snooze-check input{ width:15px; height:15px; margin:0; accent-color:var(--accent); cursor:pointer; }
+
+  .pf-mail-input{
+    width:100%; font-family:var(--body); font-size:13.5px; color:var(--text);
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:13px 14px; outline:none; appearance:none;
+  }
+  .pf-mail-input:focus{ border-color:var(--accent); }
+  .pf-mail-input:disabled{ opacity:.65; cursor:not-allowed; }
+  .pf-mail-field-hint{ font-size:11px; color:var(--text-faint); margin-top:7px; line-height:1.4; }
+  select.pf-mail-input{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2397A5B4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center; background-size:16px; padding-right:36px;
+  }
+
+  .pf-icon-btn-round{
+    width:30px; height:30px; flex-shrink:0; border-radius:50%;
+    border:1px solid var(--border); background:var(--surface); color:var(--text-dim);
+    cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
+  }
+  .pf-icon-btn-round:hover{ border-color:var(--accent); color:var(--accent); }
+
+  .ledger.comments-mode{ display:flex; flex-direction:column; overflow-y:hidden; padding-bottom:0; }
+  .pf-comments-panel{ padding:0 22px 26px; display:flex; flex-direction:column; min-height:0; flex:1; }
+  .pf-comments-header{ display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-shrink:0; }
+  .pf-comments-title{ font-family:var(--disp); font-size:16px; font-weight:600; }
+  .pf-comments-feed{ flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+  .pf-comment-form{ display:flex; flex-direction:column; gap:8px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border-soft); flex-shrink:0; }
+
+
+  /* Auto-generated ticket events (Ticket opened/closed, Snoozed till/Snooze
+     cleared, Initial mail sent, Follow-up started/stopped -- see
+     addSupabaseSystemMessage_ in Code.js) -- deliberately NOT a comment
+     card: no author, centered, a thin divider either side, reads as
+     something that HAPPENED in the thread rather than something someone
+     typed. Shared by both the Proforma tab's and Ticket Console's own
+     feeds (pfCommentRowHtml_). Dot/text color keys off the event's own
+     nature (pfSysMessageKind_) -- good=green (opened/started), accent=blue
+     (mail sent), warn=amber (snoozed); anything else (closed/cleared/
+     stopped) stays the plain muted default. */
+  .pf-sys-msg{ display:flex; align-items:center; gap:10px; }
+  .pf-sys-msg .line{ flex:1; min-width:12px; height:1px; background:var(--border); }
+  /* A little darker + bolder than before; the " · name · time" part stays a touch lighter. */
+  /* Wraps onto a 2nd line (centred) instead of running off the panel. */
+  .pf-sys-pill{ flex:0 1 auto; min-width:0; max-width:82%; font-family:var(--mono); font-size:11px; font-weight:600; color:var(--text-dim); white-space:normal; overflow-wrap:anywhere; text-align:center; line-height:1.45; padding:0 4px; }
+  .pf-sys-pill .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--text-dim); margin-right:6px; vertical-align:middle; position:relative; top:-1px; }
+  .pf-sys-meta{ font-weight:500; opacity:.85; }
+  .pf-sys-msg.good .pf-sys-pill{ color:var(--good); }
+  .pf-sys-msg.good .pf-sys-pill .dot{ background:var(--good); }
+  .pf-sys-msg.accent .pf-sys-pill{ color:var(--accent); }
+  .pf-sys-msg.accent .pf-sys-pill .dot{ background:var(--accent); }
+  .pf-sys-msg.warn .pf-sys-pill{ color:var(--warn); }
+  .pf-sys-msg.warn .pf-sys-pill .dot{ background:var(--warn); }
+  /* Kinds from pfSysMessageKind_ -- text + dot take the colour */
+  /* Activity chat events: text in the darker shade, dot in the action's own colour (same colours as the invoice-page buttons, "Action colours" below). */
+  .pf-sys-msg.mail .pf-sys-pill{ color:#3F42C8; } .pf-sys-msg.mail .pf-sys-pill .dot{ background:#6366F1; }
+  .pf-sys-msg.start .pf-sys-pill{ color:#3F42C8; } .pf-sys-msg.start .pf-sys-pill .dot{ background:#6366F1; }
+  .pf-sys-msg.stop .pf-sys-pill{ color:#A85A06; } .pf-sys-msg.stop .pf-sys-pill .dot{ background:#F0952C; }
+  .pf-sys-msg.snooze .pf-sys-pill{ color:#8B0000; } .pf-sys-msg.snooze .pf-sys-pill .dot{ background:#8B0000; }
+  .pf-sys-msg.fs-paid .pf-sys-pill{ color:#00803A; } .pf-sys-msg.fs-paid .pf-sys-pill .dot{ background:#00B050; }
+  .pf-sys-msg.fs-cancel .pf-sys-pill{ color:#B30000; } .pf-sys-msg.fs-cancel .pf-sys-pill .dot{ background:#E00000; }
+  .pf-sys-msg.fs-tbd .pf-sys-pill{ color:#00C8C8; } .pf-sys-msg.fs-tbd .pf-sys-pill .dot{ background:#00C8C8; }
+  .pf-sys-msg.ticket .pf-sys-pill{ color:#5F5F5F; } .pf-sys-msg.ticket .pf-sys-pill .dot{ background:#9E9E9E; }
+  [data-theme="dark"] .pf-sys-msg.mail .pf-sys-pill{ color:#A5A8FF; } [data-theme="dark"] .pf-sys-msg.mail .pf-sys-pill .dot{ background:#A5A8FF; }
+  [data-theme="dark"] .pf-sys-msg.start .pf-sys-pill{ color:#A5A8FF; } [data-theme="dark"] .pf-sys-msg.start .pf-sys-pill .dot{ background:#A5A8FF; }
+  [data-theme="dark"] .pf-sys-msg.stop .pf-sys-pill{ color:#F5B26B; } [data-theme="dark"] .pf-sys-msg.stop .pf-sys-pill .dot{ background:#F5B26B; }
+  [data-theme="dark"] .pf-sys-msg.snooze .pf-sys-pill{ color:#F08080; } [data-theme="dark"] .pf-sys-msg.snooze .pf-sys-pill .dot{ background:#F08080; }
+  [data-theme="dark"] .pf-sys-msg.fs-paid .pf-sys-pill{ color:#4ADE80; } [data-theme="dark"] .pf-sys-msg.fs-paid .pf-sys-pill .dot{ background:#4ADE80; }
+  [data-theme="dark"] .pf-sys-msg.fs-cancel .pf-sys-pill{ color:#F87171; } [data-theme="dark"] .pf-sys-msg.fs-cancel .pf-sys-pill .dot{ background:#F87171; }
+  [data-theme="dark"] .pf-sys-msg.fs-tbd .pf-sys-pill{ color:#00C8C8; } [data-theme="dark"] .pf-sys-msg.fs-tbd .pf-sys-pill .dot{ background:#00C8C8; }
+  [data-theme="dark"] .pf-sys-msg.ticket .pf-sys-pill{ color:#C4C4C4; } [data-theme="dark"] .pf-sys-msg.ticket .pf-sys-pill .dot{ background:#C4C4C4; }
+  .pf-sys-msg.scheduled .pf-sys-pill{ color:#3F42C8; } .pf-sys-msg.scheduled .pf-sys-pill .dot{ background:#6366F1; }
+  [data-theme="dark"] .pf-sys-msg.scheduled .pf-sys-pill{ color:#A5A8FF; } [data-theme="dark"] .pf-sys-msg.scheduled .pf-sys-pill .dot{ background:#A5A8FF; }
+
+  .pf-comments-header{ gap:10px; padding:14px 0; margin-bottom:0; border-bottom:1px solid var(--border); }
+  .pf-comments-header .pf-icon-btn-round{ width:30px; height:30px; border-radius:6px; border-color:var(--border); background:var(--bg-raised); color:var(--text-dim); }
+  .pf-comments-header .pf-icon-btn-round:hover{ border-color:var(--text-faint); color:var(--text); }
+  .pf-comments-header .pf-icon-btn-round svg{ width:15px; height:15px; }
+  .pf-comments-head-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .pf-comments-title{ font:600 15px/1.3 var(--body); letter-spacing:-.2px; color:var(--text); }
+  .pf-comments-sub{ font:400 11px var(--body); color:var(--text-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pf-comments-sub:empty{ display:none; }
+  .pf-comments-feed{ gap:0; padding-top:16px; }
+  .pf-comment-form{ gap:8px; border-top-color:var(--border); }
+  @keyframes pfxPulse{ 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
+
+  /* Ticket Console */
+  /* Open and closed tables share ONE fixed grid (table-layout:fixed, same widths) so their columns line up.
+     11 columns each: column 10 is Pending Since (open) / Days to close (closed). Long text ends in "…". */
+  .tc-table.fixed-cols{ min-width:1240px; table-layout:fixed; }
+  .tc-table.fixed-cols th, .tc-table.fixed-cols td{ overflow:hidden; text-overflow:ellipsis; }
+  .tc-table.fixed-cols th:nth-child(1){ width:12%; }
+  .tc-table.fixed-cols th:nth-child(2){ width:10%; }
+  .tc-table.fixed-cols th:nth-child(3){ width:8%; }
+  .tc-table.fixed-cols th:nth-child(4){ width:7%; }
+  .tc-table.fixed-cols th:nth-child(5){ width:5%; }
+  .tc-table.fixed-cols th:nth-child(6){ width:20%; }
+  .tc-table.fixed-cols th:nth-child(7){ width:8%; }
+  .tc-table.fixed-cols th:nth-child(8){ width:11%; }
+  .tc-table.fixed-cols th:nth-child(9){ width:3%; }
+  .tc-table.fixed-cols th:nth-child(10){ width:9%; }
+  .tc-table.fixed-cols th:nth-child(11){ width:7%; }
+  .tc-table.fixed-cols .tc-rs{ max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; } /* a long Reply Status stays inside its column */
+
+  /* Ticket Console: Close ticket progress popup (tcCloseTicket) */
+  .tc-close-bk{ position:fixed; inset:0; z-index:400; background:rgba(15,20,25,.45); display:none; align-items:center; justify-content:center; }
+  .tc-close-bk.show{ display:flex; }
+  .tc-close-pop{ width:300px; max-width:calc(100% - 32px); background:var(--bg-raised); border:1px solid var(--border); border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.25); padding:26px 22px 22px; text-align:center; animation:tcClosePopIn .15s ease; }
+  @keyframes tcClosePopIn{ from{ transform:scale(.95); opacity:0; } to{ transform:none; opacity:1; } }
+  .tc-close-ic{ width:46px; height:46px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .tc-close-ic.ok{ background:var(--good-dim); color:var(--good); font-size:24px; font-weight:700; animation:tcClosePopIn .2s ease; }
+  .tc-close-ic.err{ background:var(--bad-dim); color:var(--bad); font-size:22px; font-weight:700; }
+  .tc-close-spin{ width:40px; height:40px; border-radius:50%; border:3px solid var(--border-soft); border-top-color:var(--accent); animation:tcCloseSpin .8s linear infinite; }
+  @keyframes tcCloseSpin{ to{ transform:rotate(360deg); } }
+  .tc-close-t{ font:700 16px var(--disp); color:var(--text); }
+  .tc-close-s{ margin-top:4px; font:11.5px var(--mono); color:var(--text-faint); }
+  .tc-close-e{ margin-top:8px; color:var(--bad); font-size:12.5px; line-height:1.5; word-break:break-word; }
+  .tc-close-q{ margin-top:10px; color:var(--text-dim); font-size:12.5px; line-height:1.5; }
+  .tc-close-btns{ display:flex; gap:8px; justify-content:center; }
+  .tc-close-ok.danger{ background:var(--bad); border-color:var(--bad); color:#fff; }
+  .tc-close-ok{ margin-top:14px; padding:8px 18px; border-radius:9px; border:1px solid var(--border); background:var(--bg-raised); color:var(--text); font:600 12.5px var(--body); cursor:pointer; }
+
+  /* Ticket Console: closed ticket -- Close ticket disabled */
+  .tc-btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* Ticket Console: "Open tickets" / "Closed tickets" sections (tcRender) */
+  .tc-sec-h{ display:flex; align-items:baseline; gap:8px; padding:14px 14px 10px; }
+  .tc-sec-h.tc-sec-closed{ margin-top:22px; padding-top:14px; }
+  .tc-sec-t{ font:700 14px var(--disp); color:var(--text); }
+  .tc-sec-n{ font:600 12px var(--mono); color:var(--text-faint); }
+  .tc-table-closed tbody td, .tc-table-closed tbody td.tc-ticket-id{ color:var(--text-dim); }
+
+  /* Ticket Console: closed ticket message (tcClosedMsgHtml_) -- neutral grey box under the buttons */
+  .tc-closed-msg{ margin:12px 0 4px; padding:10px 14px; border-radius:10px; border:1px solid #D8DEE6; border-left:3px solid #57657A; background:#F1F3F6; color:#3B4656; font-size:12.5px; line-height:1.5; }
+  .tc-closed-msg b{ font-weight:600; }
+  [data-theme="dark"] .tc-closed-msg{ background:#1D2731; border-color:#263140; border-left-color:#97A5B4; color:#C3CDD8; }
+
+  /* Ticket Console: Pending / Actioned tabs (same underline look as the Tracker's) */
+  .tc-tabs{ display:flex; gap:22px; padding:10px 28px 0; margin:0 0 6px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .tc-tab{ background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-1px; padding:6px 0 9px; font:600 14px var(--body); color:var(--text-dim); cursor:pointer; }
+  .tc-tab .tc-tab-n{ margin-left:6px; font:500 13px var(--body); color:var(--text-faint); }
+  .tc-tab.on{ color:var(--accent); border-bottom-color:var(--accent); }
+
+  .tc-toolbar{ border-bottom:none; padding-bottom:14px; }
+  .tc-tabs{ align-self:flex-start; display:inline-flex; gap:4px; margin:0 28px 14px; padding:4px; border:none; border-radius:10px; background:var(--surface-hi); }
+  .tc-toolbar .tc-tabs{ margin:0; }
+  .tc-toolbar-left{ display:flex; align-items:center; gap:14px; min-width:0; }
+  .tc-toolbar-left .tc-sub{ margin-top:0; }
+  .tc-tab{ display:flex; align-items:center; gap:8px; border:none; margin:0; padding:7px 16px; border-radius:8px; font:600 13px var(--body); color:var(--text-dim); }
+  .tc-tab .tc-tab-n{ margin-left:0; font:600 11px var(--mono); background:var(--border-soft); color:var(--text-dim); padding:1px 7px; border-radius:20px; }
+  .tc-tab.on{ background:var(--bg-raised); color:var(--accent); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .tc-tab.on .tc-tab-n{ background:var(--accent-dim); color:var(--accent); }
+  .tc-list-card{ background:var(--bg-raised); border:1px solid var(--border-soft); border-radius:14px; overflow:clip; margin-bottom:18px; box-shadow:0 1px 2px rgba(16,24,40,.04); }
+  /* Columns never squeeze (e.g. when the ticket sidebar is open): the cards keep a minimum width and the list scrolls sideways; the sticky header still works. */
+  .tc-list-card{ min-width:1450px; }
+  .tc-list-card .tc-sec-h{ align-items:center; gap:10px; margin:0; padding:14px 18px; border-bottom:1px solid var(--border-soft); }
+  .tc-list-card .tc-sec-h::after{ display:none; }
+  .tc-sec-dot{ width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+  .tc-list-closed .tc-sec-dot{ background:var(--text-faint); }
+  .tc-list-card .tc-sec-t{ font:700 15px var(--disp); letter-spacing:0; text-transform:none; }
+  .tc-list-card .tc-sec-n{ font:600 11px var(--mono); background:var(--surface-hi); color:var(--text-dim); padding:2px 8px; border-radius:20px; }
+  .tc-list-card .tc-sec-n:empty{ display:none; }
+  .tc-list-card table.tc-table th{ background:var(--surface); font:600 12px var(--body); letter-spacing:0; text-transform:none; color:var(--text-dim); padding:10px 14px; }
+  .tc-list-card table.tc-table td{ padding:12px 14px; vertical-align:middle; }
+  .tc-list-card table.tc-table tbody tr:last-child td{ border-bottom:none; }
+  .tc-list-card table.tc-table tbody tr{ transition:background .12s; }
+  .tc-list-card table.tc-table tbody tr.active{ box-shadow:inset 3px 0 0 var(--accent); }
+  table.tc-table th:nth-child(7), table.tc-table th:nth-child(11), table.tc-table td.tc-num{ text-align:right; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(1){ width:13%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(2){ width:10%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(3){ width:9%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(4){ width:7%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(5){ width:5%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(6){ width:14%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(7){ width:9%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(8){ width:9%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(9){ width:3%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(10){ width:8%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(11){ width:7%; }
+  .tc-list-card .tc-table.fixed-cols th:nth-child(12){ width:6%; }
+  .tc-tid{ font:600 12px var(--mono); color:var(--accent); background:var(--accent-dim); padding:3px 8px; border-radius:6px; }
+  .tc-acc{ font-weight:600; }
+  .tc-list-card .tc-amount{ font-family:var(--body); font-weight:700; }
+  .tc-faint{ color:var(--text-faint); }
+  .tc-rs{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:600; white-space:nowrap; }
+  .tc-rs i{ width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .tc-rs.cxo{ background:#EEF2FF; color:#4338CA; }
+  .tc-rs.fu{ background:#E3EDFD; color:#2563EB; }
+  .tc-rs.good{ background:#DDF3E9; color:#1E8A5C; }
+  .tc-rs.bad{ background:#FBE4E4; color:#C23B3E; }
+  .tc-rs.other{ background:var(--surface-hi); color:var(--text-dim); }
+  .tc-snz{ display:inline-flex; align-items:center; gap:5px; color:#A16207; background:#FEF6D8; padding:3px 9px; border-radius:6px; font-size:12px; font-weight:600; }
+  .tc-age{ display:inline-flex; align-items:center; gap:6px; font-weight:600; }
+  .tc-age i{ width:8px; height:8px; border-radius:50%; background:currentColor; }
+  .tc-age.new{ color:#1E8A5C; } .tc-age.mid{ color:#A16207; } .tc-age.old{ color:#C23B3E; }
+  .tc-dtc{ font-weight:600; font-variant-numeric:tabular-nums; } /* Days to close (closed tickets) */
+  /* Pending Since (open tickets): solid red text (no dot, no box, no gradient). Four distinct shades by where the
+     ticket sits between the lowest and highest Pending Since on screen (tcRender's pendLevel): l1 lightest .. l4 darkest. */
+  .tc-pend{ display:inline-block; vertical-align:middle; font-weight:800; font-variant-numeric:tabular-nums; }
+  .tc-pend.l1{ color:#F08A8D; }
+  .tc-pend.l2{ color:#E5484D; }
+  .tc-pend.l3{ color:#B4161D; }
+  .tc-pend.l4{ color:#640409; }
+  [data-theme="dark"] .tc-pend.l1{ color:#FFC9CA; }
+  [data-theme="dark"] .tc-pend.l2{ color:#FF8E91; }
+  [data-theme="dark"] .tc-pend.l3{ color:#F2484E; }
+  [data-theme="dark"] .tc-pend.l4{ color:#D0101A; }
+  .tc-fu-n{ font:600 12px var(--mono); background:var(--surface-hi); padding:2px 9px; border-radius:20px; }
+
+
+  /* ===== Amounts (pfFormatCurrencyHtml): "₹ 78,695.00" -- symbol in the text colour, decimals muted ===== */
+  .amt{ white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .amt-sym{ color:var(--text); font-weight:400; margin-right:.3em; }
+  .amt-dec{ color:var(--text-faint); font-weight:400; font-size:.8em; }
+
+
+  /* ===== Ticket Console list -- same look as the Tracker list (#pfListView): underline tabs on a line,
+     section title + count above each table card, rule text on the right, grey header row. ===== */
+  #ticketConsolePage .tc-toolbar{ margin:0 40px; padding:30px 0 12px; border-bottom:1px solid var(--border); align-items:center; }
+  #ticketConsolePage .tc-tabs{ display:flex; gap:22px; padding:0; margin:0; background:none; border:none; border-radius:0; }
+  #ticketConsolePage .tc-tab{ display:flex; align-items:center; gap:0; padding:6px 0 8px; margin:0 0 -13px; border:none; border-bottom:2px solid transparent; border-radius:0; background:none; box-shadow:none; font:600 14px var(--body); color:var(--text-dim); }
+  #ticketConsolePage .tc-tab:hover{ color:var(--text); }
+  #ticketConsolePage .tc-tab .tc-tab-n{ margin-left:7px; padding:0; background:none; font:500 13px var(--body); color:var(--text-faint); }
+  #ticketConsolePage .tc-tab.on{ background:none; box-shadow:none; color:var(--accent); border-bottom-color:var(--accent); }
+  #ticketConsolePage .tc-tab.on .tc-tab-n{ background:none; color:var(--text-faint); }
+  #ticketConsolePage .tc-search{ background:var(--bg-raised); border-radius:8px; }
+  #ticketConsolePage .tc-table-wrap{ padding:0 40px 60px; }
+  #ticketConsolePage .tc-group{ margin-top:22px; }
+  #ticketConsolePage .tc-group-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:8px; }
+  #ticketConsolePage .tc-group-title-wrap{ display:flex; align-items:baseline; gap:9px; }
+  #ticketConsolePage .tc-group-title{ font:600 13px var(--body); color:var(--text); }
+  #ticketConsolePage .tc-group-count{ font:500 13px var(--body); color:var(--text-faint); }
+  #ticketConsolePage .tc-group-cond{ font:12px var(--body); color:var(--text-faint); text-align:right; }
+  #ticketConsolePage .tc-list-card{ min-width:0; margin:0; overflow-x:auto; background:var(--bg-raised); border:1px solid var(--border); border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+  #ticketConsolePage .tc-list-card table.tc-table{ min-width:1250px; }
+  #ticketConsolePage .tc-list-card table.tc-table th{ position:static; font:600 12px var(--body); letter-spacing:0; text-transform:none; color:var(--text-dim); background:var(--surface-hi); padding:10px 14px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  #ticketConsolePage .tc-list-card table.tc-table td{ padding:11px 14px; border-bottom:1px solid var(--border-soft); font-size:13px; }
+  #ticketConsolePage .tc-list-card table.tc-table tbody tr{ cursor:pointer; }
+  #ticketConsolePage .tc-list-card table.tc-table tbody tr:hover{ background:var(--surface); }
+  #ticketConsolePage .tc-list-card table.tc-table tbody tr:last-child td{ border-bottom:none; }
+  /* Cells in the Tracker's plainer style: ticket id as text, square badges, plain counts. */
+  #ticketConsolePage .tc-tid{ background:none; padding:0; color:var(--accent); font:600 12px var(--mono); }
+  #ticketConsolePage .tc-list-closed .tc-tid{ background:none; color:var(--text-dim); }
+  #ticketConsolePage .tc-acc{ font-weight:500; color:var(--text); }
+  #ticketConsolePage .tc-list-card .tc-amount{ font-weight:600; color:var(--text); }
+  #ticketConsolePage .tc-rs{ padding:2px 8px; border-radius:5px; font-size:12px; }
+  #ticketConsolePage .tc-rs i{ display:none; }
+  #ticketConsolePage .tc-snz{ padding:2px 8px; border-radius:5px; }
+  #ticketConsolePage .tc-fu-n{ background:none; padding:0; font:500 13px var(--body); color:var(--text-dim); }
+  #ticketConsolePage .tc-num{ text-align:right; font-variant-numeric:tabular-nums; }
+  #ticketConsolePage .tc-list-card table.tc-table th:nth-child(7), #ticketConsolePage .tc-list-card table.tc-table th:nth-child(11){ text-align:right; }
+  /* Open tickets, Recently closed and the Closed tab share ONE fixed grid (same % widths, 11 columns; column 10 =
+     Pending Since / Days to close), so their columns line up. Long text ends in "…" (full text on hover). The card
+     scrolls sideways when narrow. (Was table-layout:auto -- each table sized to its own text, so they didn't line up.) */
+  #ticketConsolePage .tc-list-card table.tc-table{ table-layout:fixed; width:100%; min-width:1250px; }
+  #ticketConsolePage .tc-list-card table.tc-table th, #ticketConsolePage .tc-list-card table.tc-table td{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(1){ width:11%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(2){ width:10%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(3){ width:8%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(4){ width:7%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(5){ width:4%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(6){ width:22%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(7){ width:8%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(8){ width:11%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(9){ width:3%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(10){ width:8%; }
+  #ticketConsolePage .tc-list-card .tc-table.fixed-cols th:nth-child(11){ width:8%; }
+  @media (max-width: 900px){
+    #ticketConsolePage .tc-toolbar{ margin:0 16px; flex-wrap:wrap; gap:10px; }
+    #ticketConsolePage .tc-table-wrap{ padding:0 16px 40px; }
+  }
+
+  /* ---- Activity.html ---- */
+  .act-av{ width:28px; height:28px; border-radius:50%; color:#fff; font:600 10px var(--body); letter-spacing:-.02em; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  /* thread: chat bubbles (XpenseFlow _chatMsgRowHTML) */
+  .pf-comments-feed{ gap:0 !important; padding:10px 0 !important; }
+  .act-row{ display:flex; align-items:flex-end; gap:8px; padding:4px 18% 4px 0; }
+  .act-row.mine{ flex-direction:row-reverse; padding:4px 0 4px 18%; }
+  .act-col{ min-width:0; display:flex; flex-direction:column; align-items:flex-start; }
+  .act-row.mine .act-col{ align-items:flex-end; }
+  .act-name{ font:600 11.5px var(--body); color:var(--text); margin:0 0 3px 2px; }
+  .act-bubble{ max-width:100%; padding:9px 13px; border-radius:2px 16px 16px 16px; background:var(--surface-hi); color:var(--text);
+    font:400 13.5px/1.5 var(--body); white-space:pre-wrap; overflow-wrap:anywhere; }
+  .act-row.mine .act-bubble{ border-radius:16px 16px 2px 16px; background:var(--accent-dim); }
+  .act-row.pending .act-bubble{ opacity:.6; }
+  .act-row.failed .act-bubble{ background:var(--bad-dim); }
+  .act-bubble a{ color:var(--accent); text-decoration:underline; font-weight:500; }
+  .act-mention{ background:#EEF3FB; color:#2563AB; padding:1px 5px; border-radius:4px; font-weight:600; }
+  .act-mention.me{ background:#FFF3E0; color:#B06000; }
+  .act-meta{ display:flex; align-items:center; gap:6px; margin-top:3px; padding:0 2px; font-size:10.5px; color:var(--text-faint); }
+  .act-retry{ border:none; background:none; padding:0; color:var(--bad); font:600 10.5px var(--body); cursor:pointer; text-decoration:underline; }
+  /* system event: centred strip (XpenseFlow _chatActivityStripHTML) */
+  .act-strip{ display:flex; justify-content:center; padding:6px 0; }
+  .act-strip-in{ display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap; max-width:92%; padding:5px 12px; border-radius:12px;
+    background:var(--surface-hi); border:1px solid var(--border-soft); font:600 12px var(--body); color:var(--text-dim); }
+  .act-strip-in svg{ width:12px; height:12px; flex-shrink:0; }
+  .act-strip-in small{ font:400 11.5px var(--body); color:var(--text-faint); }
+  /* unread divider (XpenseFlow _chatUnreadDividerHTML) */
+  .act-divider{ display:flex; align-items:center; gap:10px; padding:10px 0; }
+  .act-divider::before, .act-divider::after{ content:''; flex:1; height:1px; background:#F1C5C5; }
+  .act-divider span{ font:700 11px var(--body); color:#B83232; background:#FFF1F1; border:1px solid #F1C5C5; border-radius:999px; padding:3px 10px; white-space:nowrap; }
+
+  /* composer (XpenseFlow .chat-composer-wrap: one box, input on top, hint + Send underneath) */
+  .act-composer{ border:1px solid var(--border); border-radius:10px; background:color-mix(in srgb, var(--bg) 45%, var(--bg-raised)); transition:border-color .15s; }
+  .act-composer:focus-within{ border-color:var(--text); }
+  .act-composer-input{ display:block; width:100%; box-sizing:border-box; min-height:52px; max-height:160px; padding:10px 12px 0; border:none; outline:none;
+    background:transparent; resize:none; font:400 13.5px/1.5 var(--body); color:var(--text); }
+  .act-composer-input::placeholder{ color:var(--text-faint); }
+  .act-composer-bar{ display:flex; align-items:center; gap:6px; padding:6px 12px 10px; }
+  .act-composer-hint{ margin-left:auto; font-size:11px; color:var(--text-faint); }
+  .act-send-btn{ padding:7px 14px; border:none; border-radius:7px; background:var(--text); color:var(--bg-raised); font:500 12.5px var(--body); cursor:pointer; }
+  .act-send-btn:hover{ opacity:.85; }
+
+  /* "Live" dot next to the Activity title: the comments realtime channel's state (rtSubscribe_, Index.html) */
+  .act-live{ display:inline-flex; align-items:center; gap:5px; margin-left:10px; font:500 11px var(--body); color:var(--text-faint); vertical-align:2px; }
+  .act-live::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--text-faint); }
+  .act-live::after{ content:'Connecting…'; }
+  .act-live[data-state="live"]{ color:var(--good); }
+  .act-live[data-state="live"]::before{ background:var(--good); box-shadow:0 0 0 3px var(--good-dim); }
+  .act-live[data-state="live"]::after{ content:'Live'; }
+  .act-live[data-state="offline"]{ color:var(--bad); }
+  .act-live[data-state="offline"]::before{ background:var(--bad); }
+  .act-live[data-state="offline"]::after{ content:'Reconnecting…'; }
+}
